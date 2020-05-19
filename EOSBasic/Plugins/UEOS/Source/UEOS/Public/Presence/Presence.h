@@ -18,10 +18,10 @@ UENUM(BlueprintType)
 enum class EPresenceStatus : uint8
 {
 	Offline = 0			UMETA(DisplayName = "Offline"),		/** Offline Presence */
-	Online				UMETA(DisplayName = "Online"),		/** Online Presence */
-	Away				UMETA(DisplayName = "Away"),		/** Away Presence */
-	ExtendedAway		UMETA(DisplayName = "ExtendedAway"),/** Extended Away - Longer than 1 hour away **/
-	DoNotDisturb		UMETA(DisplayName = "DND")			/** Do not Disturb **/
+	Online	= 1			UMETA(DisplayName = "Online"),		/** Online Presence */
+	Away	= 2			UMETA(DisplayName = "Away"),		/** Away Presence */
+	ExtendedAway = 3	UMETA(DisplayName = "ExtendedAway"),/** Extended Away - Longer than 1 hour away **/
+	DoNotDisturb = 4	UMETA(DisplayName = "DND")			/** Do not Disturb **/
 };
 
 //TODO - Format
@@ -68,9 +68,12 @@ struct FBPCrossPlayInfo
 	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
 		FString DisplayName;
 
-	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
+	UPROPERTY(BlueprintReadOnly, Category = "UEOS|Friends|CrossPlay")
 		EPresenceStatus Presence;
 
+	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
+		FString PresenceString;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
 		EPlatformType PlatformType = EPlatformType::Epic;
 
@@ -113,7 +116,7 @@ public:
 
 protected:
 
-	static void UpdatePresenceStatus(FBPCrossPlayInfo& InFriendInfo, FEpicAccountId TargetId);
+	static FBPCrossPlayInfo UpdatePresenceStatus(FBPCrossPlayInfo& InFriendInfo, FEpicAccountId TargetId);
 
 	static void SetPresenceCallback(const EOS_Presence_SetPresenceCallbackInfo* Data);
 

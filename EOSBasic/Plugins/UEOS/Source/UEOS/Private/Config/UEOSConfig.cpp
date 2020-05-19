@@ -23,3 +23,12 @@ UEOSConfig::UEOSConfig()
 	ClientSecret = TextReader->ReadFile("Credentials/ClientSecretId.txt");*/
 	//UE_LOG(UEOSLog, Log, TEXT("HERE"));
 }
+
+void UEOSConfig::SetVariables(FString InProductId, FString InDeploymentId, FString InSandboxId, FString InClientId, FString InClientSecret)
+{
+	ProductId = InProductId;
+	DeploymentId = InDeploymentId;
+	SandboxId = InSandboxId;
+	ClientId = InClientId;
+	ClientSecret = InClientSecret;
+}

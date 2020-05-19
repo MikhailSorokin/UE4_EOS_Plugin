@@ -26,8 +26,9 @@ void UEOSPresence::QueryFriendPresence(const FBPCrossPlayInfo& InFriendInfo)
 	Options.LocalUserId = UEOSManager::GetAuthentication()->GetEpicAccountId();
 	Options.TargetUserId = AccountId.FromString(InFriendInfo.IdAsString);
 
-	FBPCrossPlayInfo NewFriendInfo(InFriendInfo);
-	EOS_Presence_QueryPresence(PresenceHandle, &Options, &NewFriendInfo, QueryPresenceCompleteCallback);
+	FBPCrossPlayInfo* NewFriendInfo = new FBPCrossPlayInfo(InFriendInfo);
+
+	EOS_Presence_QueryPresence(PresenceHandle, &Options, NewFriendInfo, QueryPresenceCompleteCallback);
 }
 
 void UEOSPresence::QueryPresenceCompleteCallback(const EOS_Presence_QueryPresenceCallbackInfo* Data)
@@ -43,12 +44,20 @@ void UEOSPresence::QueryPresenceCompleteCallback(const EOS_Presence_QueryPresenc
 	UEOSPresence* EOSPresenceInfo = UEOSManager::GetPresence();
 
 	FBPCrossPlayInfo* CrossPlayFriendInfo = (FBPCrossPlayInfo*)(Data->ClientData);
-	UpdatePresenceStatus(*CrossPlayFriendInfo, Data->TargetUserId);
 
-	EOSPresenceInfo->OnFriendPresenceQueryComplete.Broadcast(*CrossPlayFriendInfo);
+	FBPCrossPlayInfo NewFriend = UpdatePresenceStatus(*CrossPlayFriendInfo, Data->TargetUserId);
+
+	GEngine->AddOnScreenDebugMessage(-1, 7.f, FColor::Yellow, FString::Printf(TEXT("User info: %s"), *NewFriend.DisplayName));
+
+	GEngine->AddOnScreenDebugMessage(-1, 7.f, FColor::Yellow, FString::Printf(TEXT("Presence status: %d"), NewFriend.Presence));
+
+	if (EOSPresenceInfo->OnFriendPresenceQueryComplete.IsBound()) {
+		EOSPresenceInfo->OnFriendPresenceQueryComplete.Broadcast(NewFriend);
+	}
+	delete CrossPlayFriendInfo;
 }
 
-void UEOSPresence::UpdatePresenceStatus(FBPCrossPlayInfo& InFriendInfo, FEpicAccountId TargetId)
+FBPCrossPlayInfo UEOSPresence::UpdatePresenceStatus(FBPCrossPlayInfo& InFriendInfo, FEpicAccountId TargetId)
 {
 	EOS_HPresence PresenceHandle = EOS_Platform_GetPresenceInterface(UEOSManager::GetPlatformHandle());
 
@@ -63,23 +72,41 @@ void UEOSPresence::UpdatePresenceStatus(FBPCrossPlayInfo& InFriendInfo, FEpicAcc
 	if (ResultCode != EOS_EResult::EOS_Success)
 	{
 		UE_LOG(UEOSLog, Warning, TEXT("[EOS SDK | Plugin] Error when getting presence status: %s"), *UEOSCommon::EOSResultToString(ResultCode));
+		return FBPCrossPlayInfo();
 	}
 
 
 	FName Platform = FName(*FString(UTF8_TO_TCHAR(PresenceData->Platform)));
+	GEngine->AddOnScreenDebugMessage(-1, 7.f, FColor::Cyan, Platform.ToString());
+
 	if (Platform == FName("Windows"))
 			InFriendInfo.PlatformType = EPlatformType::Epic;
 	else if (Platform == FName("Steam"))
 			InFriendInfo.PlatformType = EPlatformType::Steam;
 		//So on and so forth..
 
-	InFriendInfo.Presence = (EPresenceStatus)PresenceData->Status;
+	uint8 Why = static_cast<uint8>(PresenceData->Status);
+	InFriendInfo.Presence = static_cast<EPresenceStatus>(Why);
+
+	switch (PresenceData->Status)
+	{
+	case EOS_Presence_EStatus::EOS_PS_Online:
+		InFriendInfo.PresenceString = "ONLINE";
+		break;
+	case EOS_Presence_EStatus::EOS_PS_Offline:
+		InFriendInfo.PresenceString = "OFFLINE";
+		break;
+	}
+
+	GEngine->AddOnScreenDebugMessage(-1, 7.f, FColor::Cyan, FString::Printf(TEXT("Presence status: %d"), PresenceData->Status));
 
 	//TODO - Figure out what these are and if there are useful to presence data
 	//InFriendInfo.Application = FString(UTF8_TO_TCHAR(PresenceData->ProductId));
 	//PresenceInfo.RichText = FStringUtils::Widen(PresenceInfo->RichText);
 
 	EOS_Presence_Info_Release(PresenceData);
+
+	return InFriendInfo;
 }
 
 
@@ -127,38 +154,44 @@ void UEOSPresence::SubscribeToFriendPresenceUpdates()
 	EOS_HPresence PresenceHandle = EOS_Platform_GetPresenceInterface(UEOSManager::GetPlatformHandle());
 	EOS_Presence_AddNotifyOnPresenceChangedOptions Options;
 	Options.ApiVersion = EOS_PRESENCE_ADDNOTIFYONPRESENCECHANGED_API_LATEST;
-	EOS_Presence_AddNotifyOnPresenceChanged(PresenceHandle, &Options, NULL, OnPresenceChangedCallback);
+	EOS_NotificationId PresenceNotificationId = EOS_Presence_AddNotifyOnPresenceChanged(PresenceHandle, &Options, NULL, OnPresenceChangedCallback);
+
+	if (!PresenceNotificationId)
+	{
+		UE_LOG(UEOSLog, Warning, TEXT("[EOS SDK]: could not subscribe to presence updates."));
+	}
+	/*else
+	{
+		PresenceNotifications[UserId] = PresenceNotificationId;
+	}*/
 }
 
 void UEOSPresence::OnPresenceChangedCallback(const EOS_Presence_PresenceChangedCallbackInfo* Data)
 {
-	check(Data != nullptr);
+	if (Data != nullptr) {
+		UEOSUserInfo* EOSUserInfo = UEOSManager::GetUserInfo();
 
-	UEOSUserInfo* EOSUserInfo = UEOSManager::GetUserInfo();
+		EOS_HPresence PresenceHandle = EOS_Platform_GetPresenceInterface(UEOSManager::GetPlatformHandle());
+		FEpicAccountId AccountId = FEpicAccountId();
+		EOS_Presence_QueryPresenceOptions Options;
+		Options.ApiVersion = EOS_PRESENCE_QUERYPRESENCE_API_LATEST;
+		Options.LocalUserId = UEOSManager::GetAuthentication()->GetEpicAccountId();
+		Options.TargetUserId = Data->PresenceUserId;
 
-	/*if (Data->ResultCode == EOS_EResult::EOS_Success)
-	{
-		if (EOSUserInfo != nullptr)
-		{
-			FBPCrossPlayFriendInfo FriendInfo;
-			FAccountId TargetID = FAccountId(Data->TargetUserId);
-			FriendInfo.ID = TargetID.ToString();
+		FEpicAccountId PresenceUserInfo = FEpicAccountId(Data->PresenceUserId);
+		FBPCrossPlayInfo CrossPlayInfo = FBPCrossPlayInfo();
+		CrossPlayInfo.IdAsString = PresenceUserInfo.ToString();
+		CrossPlayInfo.DisplayName = EOSUserInfo->GetDisplayName(PresenceUserInfo);
 
-			FriendInfo.DisplayName = GetDisplayName(TargetID);
-			EOSUserInfo->OnUserInfoRetreived.Broadcast(FriendInfo);
-		}
+		FBPCrossPlayInfo* NewFriendInfo = new FBPCrossPlayInfo(CrossPlayInfo);
+
+		EOS_Presence_QueryPresence(PresenceHandle, &Options, NewFriendInfo, QueryPresenceCompleteCallback);
 	}
 	else
 	{
-		UE_LOG(UEOSLog, Warning, TEXT("[EOS SDK | Plugin] Error when querying user info: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
-		if (EOSUserInfo != nullptr)
-		{
-			EOSUserInfo->OnReachedLastUserInfo.Broadcast(FBPCrossPlayFriendInfo());
-		}
-	}*/
-	
-	//UEOSUserInfo* UserInfo = UEOSManager::GetEOSManager()->GetUserInfo();
-	//UserInfo->QueryNameByAccountId(Data->PresenceUserId);
+		UE_LOG(UEOSLog, Warning, TEXT("[EOS SDK | Plugin] Error when querying presence info for udpates."));
+		
+	}
 }
 
 

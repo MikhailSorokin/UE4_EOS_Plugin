@@ -33,6 +33,8 @@ class UEOS_API UEOSConfig : public UDeveloperSettings
 public:
 
 	UEOSConfig();
+	void SetVariables(FString InProductId, FString InDeploymentId, FString InSandboxId, FString InClientId,
+	                  FString InClientSecret);
 
 	/** The Product Name to pass to EOS for this Project. */
 	UPROPERTY( config, EditAnywhere, Category = "UEOS" )

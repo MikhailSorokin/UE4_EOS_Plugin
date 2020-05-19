@@ -19,7 +19,10 @@ FString UTextReaderComponent::ReadFile(FString filePath)
 	FString result;
 	IPlatformFile& file = FPlatformFileManager::Get().GetPlatformFile();
 	if (file.DirectoryExists(*directory)) {
-		FString myFile = directory + "/" + filePath;
+		FString myFile = directory + filePath;
+
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, myFile);
+
 		FFileHelper::LoadFileToString(result, *myFile);
 	}
 	return result;

@@ -41,6 +41,7 @@ public:
 	 *
 	 * @param EpicAccountId The target Epic Account ID to use to query for the Display Name.
 	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	static FString					GetDisplayName( const FEpicAccountId& EpicAccountId );
 
 	/**

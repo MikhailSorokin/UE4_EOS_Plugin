@@ -250,13 +250,22 @@ EEOSResults UEOSManager::InitEOS()
 		{
 			FString ReadClientId = TextReader->ReadFile("Credentials/ClientId.txt");
 			FString ReadClientSecret = TextReader->ReadFile("Credentials/ClientSecretId.txt");
+
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ReadClientId);
+
+			
 			ClientId = TCHAR_TO_UTF8(*ReadClientId);
 			ClientSecret = TCHAR_TO_UTF8(*ReadClientSecret);
+
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ClientId.c_str());
+
+
 		}
 
+		PlatformOptions.ClientCredentials.ClientId = ClientId.c_str();
+		PlatformOptions.ClientCredentials.ClientSecret = ClientSecret.c_str();
 
-		PlatformOptions.ClientCredentials.ClientId = ( EOSConfig->ClientId.IsEmpty() ) ? nullptr : ClientId.c_str();
-		PlatformOptions.ClientCredentials.ClientSecret = ( EOSConfig->ClientSecret.IsEmpty() ) ? nullptr : ClientSecret.c_str();
+		EOSConfig->SetVariables(ProductId.c_str(), DeploymentId.c_str(), SandboxId.c_str(), ClientId.c_str(), ClientSecret.c_str());
 		
 #if ALLOW_RESERVED_PLATFORM_OPTIONS
 		SetReservedPlatformOptions( PlatformOptions );
