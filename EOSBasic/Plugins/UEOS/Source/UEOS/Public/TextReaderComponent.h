@@ -15,9 +15,6 @@ public:
 	// Sets default values for this component's properties
 	UTextReaderComponent();
 
-protected:
-
-public:
 	UFUNCTION(BlueprintCallable)
-	FString ReadFile(FString filename);
+		FString ReadFile(FString filename);
 };

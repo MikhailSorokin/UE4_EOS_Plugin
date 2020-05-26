@@ -5,7 +5,6 @@
 // EOS Includes
 #include "UEOSCommon.h"
 #include "Config/UEOSConfig.h"
-#include "Presence/Presence.h"
 
 #include "UEOSManager.generated.h"
 
@@ -14,8 +13,10 @@ class UEOSAuthentication;
 class UEOSMetrics;
 class UEOSFriends;
 class UEOSUserInfo;
+class UEOSPresence;
+class UEOSConnect;
 
-UCLASS(BlueprintType)
+UCLASS()
 class UEOS_API UEOSManager : public UObject
 {
 	GENERATED_BODY()
@@ -108,15 +109,29 @@ public:
 	UFUNCTION( BlueprintCallable, Category = "UEOS|Manager" )
 		static UEOSUserInfo*					GetUserInfo();
 
-
 	/**
 	 * Attempts to return the current Presence object.
-	*
-	* @return The current Presence object to return, or nullptr if not valid.
-	*/
-
+	 *
+	 * @return UEOSPresence* The current Presence object, or nullptr if not valid.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Manager")
 		static UEOSPresence* GetPresence();
+
+	/**
+	 * Attempts to return the current Connect object.
+	 *
+	 * @return UEOSConnect* The current Connect object, or nullptr if not valid.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Manager")
+		static UEOSConnect* GetConnect();
+	
+	/**
+	* Utility to return an EOS Result as a FString.
+	*
+	* @param Result The EOS Result to attempt to convert.
+	* @return FString result of the conversion.
+	*/
+	static FString								EOSResultToString( EOS_EResult Result );
 
 
 	/// CONFIG GETTERS
@@ -178,6 +193,9 @@ public:
 	UFUNCTION( BlueprintCallable, Category = "UEOS|Manager" )
 		bool							       	UpdateEOS();
 
+	//TODO - Get back to work in
+	/*UFUNCTION(BlueprintCallable, Category = "UEOS|Manager")
+	static UEOSConnect* GetConnect();*/
 
 protected:
 
@@ -204,9 +222,10 @@ protected:
 	UPROPERTY()
 		bool									bEOSShutdown;
 
-	/** The current Presence object. */
-	UPROPERTY()
-		UEOSPresence* Presence;
+	//TODO - Put in
+	/** The current Connect object. */
+	/*UPROPERTY()
+		UEOSConnect* Connect;*/
 	
 	/** The current Authentication object. */
 	UPROPERTY()
@@ -223,11 +242,19 @@ protected:
 	/** The current UserInfo object. */
 	UPROPERTY()
 		UEOSUserInfo*							UserInfo;
+	
+	/** The current Presence object. */
+	UPROPERTY()
+		UEOSPresence*							Presence;
+
+	/** The current Connect object. */
+	UPROPERTY()
+		UEOSConnect*							Connect;
 
 protected:
 
 	/* Whether or not we want to read from the Config directory or read from text files of the secret keys. */
-		bool									bUseConfig;
+	bool									bUseConfig;
 
 private:
 

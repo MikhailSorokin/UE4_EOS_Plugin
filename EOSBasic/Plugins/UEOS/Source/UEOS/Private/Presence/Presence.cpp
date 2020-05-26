@@ -37,7 +37,7 @@ void UEOSPresence::QueryPresenceCompleteCallback(const EOS_Presence_QueryPresenc
 
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
-		UE_LOG(UEOSLog, Log, TEXT("[EOS SDK | Plugin] Error when getting presence status: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
+		UE_LOG(UEOSLog, Log, TEXT("[EOS SDK | Plugin] Error when getting presence status: %s"), *UEOSManager::EOSResultToString(Data->ResultCode));
 		return;
 	}
 
@@ -71,7 +71,7 @@ FBPCrossPlayInfo UEOSPresence::UpdatePresenceStatus(FBPCrossPlayInfo& InFriendIn
 
 	if (ResultCode != EOS_EResult::EOS_Success)
 	{
-		UE_LOG(UEOSLog, Warning, TEXT("[EOS SDK | Plugin] Error when getting presence status: %s"), *UEOSCommon::EOSResultToString(ResultCode));
+		UE_LOG(UEOSLog, Warning, TEXT("[EOS SDK | Plugin] Error when getting presence status: %s"), *UEOSManager::EOSResultToString(ResultCode));
 		return FBPCrossPlayInfo();
 	}
 
@@ -134,7 +134,7 @@ void UEOSPresence::SetPresence(FEpicAccountId TargetUserId)
 
 	} else
 	{
-		UE_LOG(UEOSLog, Log, TEXT("%s: threw error of: %s"), __FUNCTIONW__, *UEOSCommon::EOSResultToString(EResult));
+		UE_LOG(UEOSLog, Log, TEXT("%s: threw error of: %s"), __FUNCTIONW__, *UEOSManager::EOSResultToString(EResult));
 	}
 
 }
@@ -143,7 +143,7 @@ void UEOSPresence::SetPresenceCallback(const EOS_Presence_SetPresenceCallbackInf
 {
 	check(Data != nullptr);
 
-	UE_LOG(UEOSLog, Log, TEXT("On set presence result code: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
+	UE_LOG(UEOSLog, Log, TEXT("On set presence result code: %s"), *UEOSManager::EOSResultToString(Data->ResultCode));
 
 	
 }

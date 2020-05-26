@@ -9,7 +9,10 @@ public class EOSBasic : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore",
-                                                            "UEOS", "EOSSDK" } );
+                                                            "UEOS", "EOSSDK",
+                                                            "OnlineSubsystem",
+                                                            "OnlineSubsystemSteam"
+		} );
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

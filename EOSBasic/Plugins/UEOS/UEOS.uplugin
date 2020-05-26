@@ -15,16 +15,20 @@
 	"IsBetaVersion": true,
 	"Installed": false,
 	"Modules": [
-    {
-      "Name": "UEOS",
-      "Type": "Runtime",
-      "LoadingPhase": "EarliestPossible",
-      "WhitelistPlatforms": [
-        "Win64",
-        "Win32",
-        "Linux",
-        "Mac"
-      ]
-    }
+		{
+			"Name": "UEOS",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"AdditionalDependencies": [
+        "OnlineSubsystem",
+        "OnlineSubsystemSteam"
+      ],
+			"WhitelistPlatforms": [
+				"Win64",
+				"Win32",
+				"Linux",
+				"Mac"
+			]
+		}
 	]
 }

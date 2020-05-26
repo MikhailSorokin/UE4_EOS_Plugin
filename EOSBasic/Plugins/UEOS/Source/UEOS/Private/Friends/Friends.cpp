@@ -36,7 +36,7 @@ void UEOSFriends::QueryFriendsCallback( const EOS_Friends_QueryFriendsCallbackIn
 			}
 			else
 			{
-				FString CallbackError = FString::Printf(TEXT("[EOS SDK | Plugin] Error %s when querying friends: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
+				FString CallbackError = FString::Printf(TEXT("[EOS SDK | Plugin] Error %s when querying friends: %s"), *UEOSManager::EOSResultToString(Data->ResultCode));
 				//NOTE: Leave it to blueprint to log the warning
 				if (EOSFriends->OnFriendActionError.IsBound()) {
 					EOSFriends->OnFriendActionError.Broadcast(CallbackError);
@@ -104,7 +104,7 @@ void UEOSFriends::SendInviteCallback(const EOS_Friends_SendInviteCallbackInfo* D
 			else
 			{
 				FString DisplayName = UEOSManager::GetEOSManager()->GetUserInfo()->GetDisplayName(Data->TargetUserId);
-				FString CallbackError = FString::Printf(TEXT("[EOS SDK | Plugin] Error %s when sending invite to %s"), *UEOSCommon::EOSResultToString(Data->ResultCode), * DisplayName);
+				FString CallbackError = FString::Printf(TEXT("[EOS SDK | Plugin] Error %s when sending invite to %s"), *UEOSManager::EOSResultToString(Data->ResultCode), * DisplayName);
 				//NOTE: Leave it to blueprint to log the warning
 				if (EOSFriends->OnFriendActionError.IsBound()) {
 					EOSFriends->OnFriendActionError.Broadcast(CallbackError);
@@ -143,7 +143,7 @@ void UEOSFriends::AcceptInviteCallback(const EOS_Friends_AcceptInviteCallbackInf
 			else
 			{
 				FString DisplayName = UEOSManager::GetEOSManager()->GetUserInfo()->GetDisplayName(Data->TargetUserId);
-				FString CallbackError = FString::Printf(TEXT("[EOS SDK | Plugin] Error %s when accepting invite from friend: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode), *DisplayName);
+				FString CallbackError = FString::Printf(TEXT("[EOS SDK | Plugin] Error %s when accepting invite from friend: %s"), *UEOSManager::EOSResultToString(Data->ResultCode), *DisplayName);
 				//NOTE: Leave it to blueprint to log the warning
 				if (EOSFriends->OnFriendActionError.IsBound()) {
 					EOSFriends->OnFriendActionError.Broadcast(CallbackError);
@@ -180,7 +180,7 @@ void UEOSFriends::RejectInviteCallback(const EOS_Friends_RejectInviteCallbackInf
 			else
 			{
 				FString DisplayName = UEOSManager::GetEOSManager()->GetUserInfo()->GetDisplayName(Data->TargetUserId);
-				FString CallbackError = FString::Printf(TEXT("[EOS SDK | Plugin] Error %s when rejecting invite from friend: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode), *DisplayName);
+				FString CallbackError = FString::Printf(TEXT("[EOS SDK | Plugin] Error %s when rejecting invite from friend: %s"), *UEOSManager::EOSResultToString(Data->ResultCode), *DisplayName);
 				//NOTE: Leave it to blueprint to log the warning
 				if (EOSFriends->OnFriendActionError.IsBound()) {
 					EOSFriends->OnFriendActionError.Broadcast(CallbackError);

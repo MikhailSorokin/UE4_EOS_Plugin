@@ -4,7 +4,6 @@
 #include "TextReaderComponent.h"
 #include "Runtime/Core/Public/Misc/Paths.h"
 #include "Runtime/Core/Public/HAL/PlatformFilemanager.h"
-#include "Runtime/Core/Public/Misc/FileHelper.h"
 
 UTextReaderComponent::UTextReaderComponent()
 {
@@ -14,15 +13,18 @@ UTextReaderComponent::UTextReaderComponent()
 FString UTextReaderComponent::ReadFile(FString filePath)
 {
 	//FPaths::ProjectDir()
-	//Read file from [project]/
+	//Read file from [project]/filePath/
 	FString directory = FPaths::ProjectDir();
-	FString result;
+	FString result= "";
 	IPlatformFile& file = FPlatformFileManager::Get().GetPlatformFile();
 	if (file.DirectoryExists(*directory)) {
 		FString myFile = directory + filePath;
 
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, myFile);
-
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Attempting to locate: " + myFile);
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "in directory: " + directory);
+		}
+			
 		FFileHelper::LoadFileToString(result, *myFile);
 	}
 	return result;

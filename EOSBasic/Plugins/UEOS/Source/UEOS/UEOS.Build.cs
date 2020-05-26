@@ -33,7 +33,9 @@ public class UEOS : ModuleRules
             new string[]
             {
                 "Core",
-                "EOSSDK"
+                "EOSSDK",
+                "OnlineSubsystem",
+                "OnlineSubsystemSteam"
             }
             );
 
@@ -45,7 +47,9 @@ public class UEOS : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "Projects"
+                "Projects",
+                "OnlineSubsystem",
+                "OnlineSubsystemSteam"
             }
             );
 
