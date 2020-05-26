@@ -32,6 +32,11 @@ The first/initial implementation for support of UserInfo queries is now in. You 
 Once you have initialized and logged in, you can also use:
 - R will attempt to request UserInfo and then populate the DisplayName in the Widget
 
+For right now, all your friend info will display. Presence not entirely working yet.
+
+# Connect
+After you login normally through Dev Tool/Account Portal, it will attempt to log you in with Steam/Epic Games. Epic Games currently generates a token, but the ContinuanceToken becomes null. Steam may end up working but I can't test it because I don't have a test app working. 
+
 The project, blueprint nodes and comments have more direct usage information.
 
 License:
