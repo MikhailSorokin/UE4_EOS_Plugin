@@ -7,7 +7,14 @@
 		{
 			"Name": "EOSBasic",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"OnlineSubsystemUtils",
+				"Party",
+				"CoreUObject",
+				"UMG"
+			]
 		}
 	],
 	"Plugins": [
@@ -22,6 +29,10 @@
 		{
 			"Name": "SteamVR",
 			"Enabled": false
+		},
+		{
+			"Name": "OnlineSubsystemSteam",
+			"Enabled": true
 		}
 	]
 }

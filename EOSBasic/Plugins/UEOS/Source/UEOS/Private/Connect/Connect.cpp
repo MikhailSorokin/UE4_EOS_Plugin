@@ -12,9 +12,9 @@
 
 #include "UserInfo/UserInfo.h"
 
-
 #include "OnlineSubsystemSteam.h"
 #include "OnlineEncryptedAppTicketInterfaceSteam.h"
+#include "OnlineAuthInterfaceUtilsSteam.h"
 
 
 //TODO - Work in progress
@@ -60,6 +60,8 @@ void UEOSConnect::Login(EExternalCredentialType ExternalCredentialType)
 		FEpicAccountId EpicAccountId = UserAuthToken->AccountId;
 		FString AuthDisplayName = UserInfo->GetDisplayName(EpicAccountId);
 		UE_LOG(UEOSLog, Log, TEXT("%s : Access token value: %hs, name is: %s, type is: %d"), __FUNCTIONW__, UserAuthToken->AccessToken, *AuthDisplayName, static_cast<uint8>(UserAuthToken->AuthType));
+
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, *FString::Printf(TEXT("%s :Access token value : %hs, name is : %s, type is : %d"), __FUNCTIONW__, UserAuthToken->AccessToken, *AuthDisplayName, static_cast<uint8>(UserAuthToken->AuthType)));
 		DoEOSConnectLogin(UserAuthToken->AccessToken, EOS_EExternalCredentialType::EOS_ECT_EPIC);
 
 		Authentication->ReleaseAuthToken(UserAuthToken);
@@ -69,8 +71,7 @@ void UEOSConnect::Login(EExternalCredentialType ExternalCredentialType)
 	{
 		UE_LOG(UEOSLog, Display, TEXT("%s: Attempting connect login using Steam."), __FUNCTIONW__)
 
-		/*FOnlineEncryptedAppTicketSteamPtr SteamEncryptedAppTicketInterface = GetSteamEncryptedAppTicketInterface();
-
+		FOnlineEncryptedAppTicketSteamPtr SteamEncryptedAppTicketInterface = GetSteamEncryptedAppTicketInterface();
 		SteamEncryptedAppTicketInterface->OnEncryptedAppTicketResultDelegate.BindUObject(this, &ThisClass::HandleSteamEncryptedAppTicketResponse);
 
 		bool bRequestQueued = SteamEncryptedAppTicketInterface->RequestEncryptedAppTicket(NULL, 0);
@@ -82,7 +83,7 @@ void UEOSConnect::Login(EExternalCredentialType ExternalCredentialType)
 
 		UE_LOG(UEOSLog, Verbose, TEXT("%s: Bound HandleSteamEncryptedAppTicketResponse to OnEncryptedAppTicketResultDelegate."), __FUNCTIONW__)
 		// Connect login will continue when this callback occurs.
-		*/
+		
 	}
 	else
 	{
@@ -99,8 +100,7 @@ void UEOSConnect::HandleSteamEncryptedAppTicketResponse(bool bEncryptedDataAvail
 	if (bEncryptedDataAvailable)
 	{
 		UE_LOG(UEOSLog, Verbose, TEXT("%s: Getting EncryptedAppTicket"), __FUNCTIONW__);
-		bool bSuccess = false;
-		//bool bSuccess = GetSteamEncryptedAppTicketInterface()->GetEncryptedAppTicket(EncryptedBytes);
+		bool bSuccess = GetSteamEncryptedAppTicketInterface()->GetEncryptedAppTicket(EncryptedBytes);
 		if (bSuccess)
 		{
 			const uint32_t MaxEncodedDataLen = 2048;
@@ -109,8 +109,7 @@ void UEOSConnect::HandleSteamEncryptedAppTicketResponse(bool bEncryptedDataAvail
 			EOS_EResult Result = EOS_ByteArray_ToString(EncryptedBytes.GetData(), EncryptedBytes.Num(), OutBuffer, &OutEncodedDataLen);
 
 			if (Result == EOS_EResult::EOS_Success) {
-				//UE_LOG(UEOSLog, Verbose, TEXT("%s: result is: %s"), __FUNCTIONW__, *EnumToString(TEXT("EOS_EResult"), static_cast<uint8>(Result)));
-				UE_LOG(UEOSLog, Verbose, TEXT("%s: result is: %d"), __FUNCTIONW__, static_cast<uint8>(Result));
+				UE_LOG(UEOSLog, Verbose, TEXT("%s: result is: %s"), __FUNCTIONW__, *EnumToString(TEXT("EOS_EResult"), static_cast<uint8>(Result)));
 			}
 
 			DoEOSConnectLogin(OutBuffer, EOS_EExternalCredentialType::EOS_ECT_STEAM_APP_TICKET, NULL);
@@ -138,7 +137,7 @@ void UEOSConnect::DoEOSConnectLogin(const char* CredentialsToken, EOS_EExternalC
 	Credentials.Token = CredentialsToken;
 	Credentials.Type = CredentialsType;
 
-	//TODO - The loginInfo throws an error with any device provider besides Apple&Nintendo
+	//NOTE: The loginInfo throws an error with any device provider besides Apple&Nintendo, so keep NULL for others
 	EOS_Connect_LoginOptions Options;
 	Options.ApiVersion = EOS_CONNECT_LOGIN_API_LATEST;
 	Options.Credentials = &Credentials;
@@ -152,6 +151,8 @@ void UEOSConnect::LoginUserCompleteCallback(const EOS_Connect_LoginCallbackInfo*
 {
 	UE_LOG(UEOSLog, Verbose, TEXT("%s: Calling EOS_Connect_Login. Options.Credentials.Token = %p"), __FUNCTIONW__, Data->ContinuanceToken);
 
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, *FString::Printf(TEXT("%s: Calling EOS_Connect_Login. Options.Credentials.Token = %p"), __FUNCTIONW__, Data->ContinuanceToken));
+	
 	EOS_HConnect ConnectHandle = EOS_Platform_GetConnectInterface(UEOSManager::GetEOSManager()->GetPlatformHandle());
 
 	if (Data->ResultCode == EOS_EResult::EOS_Success)
@@ -169,15 +170,20 @@ void UEOSConnect::LoginUserCompleteCallback(const EOS_Connect_LoginCallbackInfo*
 		 * or EOS_Connect_LinkAccount to continue the flow
 		 */
 		UEOSManager::GetConnect()->CreateUser(&Data->ContinuanceToken);
+
+		if (UEOSManager::GetConnect()->OnConnectLoginSuccess.IsBound())
+		{
+			UEOSManager::GetConnect()->OnConnectLoginSuccess.Broadcast();
+		}
 	}
 	else
 	{
 		// Login failed due to error.
-		UE_LOG(UEOSLog, Error, TEXT("%s: Connect login failed with result %s"), __FUNCTIONW__, *UEOSManager::EOSResultToString(Data->ResultCode))
+		UE_LOG(UEOSLog, Error, TEXT("%s: Connect login failed with result %s"), __FUNCTIONW__, *UEOSCommon::EOSResultToString(Data->ResultCode))
 
-		if (UEOSManager::GetConnect()->OnLoginFail.IsBound())
+		if (UEOSManager::GetConnect()->OnConnectLoginFail.IsBound())
 		{
-			UEOSManager::GetConnect()->OnLoginFail.Broadcast();
+			UEOSManager::GetConnect()->OnConnectLoginFail.Broadcast();
 		}
 	}
 }
@@ -198,7 +204,7 @@ void UEOSConnect::CreateUserCompleteCallback(const EOS_Connect_CreateUserCallbac
 		EOS_HConnect ConnectHandle = EOS_Platform_GetConnectInterface(UEOSManager::GetEOSManager()->GetPlatformHandle());
 
 		if (Data->ResultCode != EOS_EResult::EOS_Success) {
-			UE_LOG(UEOSLog, Warning, TEXT("%s : %s"), __FUNCTIONW__, *UEOSManager::EOSResultToString(Data->ResultCode));
+			UE_LOG(UEOSLog, Warning, TEXT("%s : %s"), __FUNCTIONW__, *UEOSCommon::EOSResultToString(Data->ResultCode));
 			return;
 		}
 
@@ -214,11 +220,11 @@ void UEOSConnect::CreateUserCompleteCallback(const EOS_Connect_CreateUserCallbac
 
 void UEOSConnect::OnLinkAccountCallback(const EOS_Connect_LinkAccountCallbackInfo* Data)
 {
-	UE_LOG(UEOSLog, Log, TEXT("%s : %s"), __FUNCTIONW__, *UEOSManager::EOSResultToString(Data->ResultCode));
+	UE_LOG(UEOSLog, Log, TEXT("%s : %s"), __FUNCTIONW__, *UEOSCommon::EOSResultToString(Data->ResultCode));
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Successfully linked your account to Epic Account Services!");
 }
 
 // Static function
-/*
 FOnlineEncryptedAppTicketSteamPtr UEOSConnect::GetSteamEncryptedAppTicketInterface()
 {
 	FOnlineSubsystemSteam* SteamSubsystem = (FOnlineSubsystemSteam*) (IOnlineSubsystem::Get(STEAM_SUBSYSTEM));
@@ -232,9 +238,9 @@ FOnlineEncryptedAppTicketSteamPtr UEOSConnect::GetSteamEncryptedAppTicketInterfa
 	{
 		UE_LOG(UEOSLog, Fatal, TEXT("%s: Failed to get encrypted app ticket interface of Steam subsystem."), __FUNCTIONW__)
 	}
-	
+
 	return SteamEncryptedAppTicketInterface;
-}*/
+}
 
 const FString UEOSConnect::EnumToString(const TCHAR* Enum, int32 EnumValue)
 {

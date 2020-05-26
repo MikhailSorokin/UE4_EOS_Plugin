@@ -6,12 +6,16 @@
 // Engine Includes
 #include "UObject/Object.h"
 
+#include "OnlineEncryptedAppTicketInterfaceSteam.h"
+
 // EOS Includes
 #include "eos_sdk.h"
 #include "eos_connect.h"
 #include "eos_version.h"
 #include "eos_common.h"
 #include "UObject/CoreOnline.h"
+#include "OnlineAuthInterfaceUtilsSteam.h"
+
 #include "Connect.generated.h"
 
 //TODO: The ContinuanceToken should be added as a parameter to this delegate; however, it needs an "Unreal-friendly" type to hold it.
@@ -65,16 +69,18 @@ public:
 	void CreateUser(const EOS_ContinuanceToken* InContinuanceToken);
 
 	/** Fires when a Login has completed successfully. 
-	* According to the documentation (https://dev.epicgames.com/docs/services/en-US/Interfaces/Connect/index.html), when this occurs, the player should be prompted to login with another identity provider, potentially linking their account with an ID they have used before.
+	* According to the documentation (https://dev.epicgames.com/docs/services/en-US/Interfaces/Connect/index.html),
+	* when this occurs, the player should be prompted to login with another identity provider,
+	* potentially linking their account with an ID they have used before.
 	*/
 	UPROPERTY(BlueprintAssignable, Category = "UEOS|Connect")
-		FOnConnectLoginSuccess OnLoginSuccess;
+		FOnConnectLoginSuccess OnConnectLoginSuccess;
 
-	/** Fires when a Login has failed.
+	/** Fires when a Login has failed through the connect interface.
 	*/
 	UPROPERTY(BlueprintAssignable, Category = "UEOS|Connect")
-		FOnConnectLoginFail OnLoginFail;
-	//FOnEncryptedAppTicketResponseDelegate ResSteamResult;
+		FOnConnectLoginFail OnConnectLoginFail;
+	FOnEncryptedAppTicketResponseDelegate ResSteamResult;
 
 	
 protected:
@@ -98,5 +104,5 @@ private:
 	/* Helper function that calls the SDK's EOS_Connect_Login function. */
 	static void DoEOSConnectLogin(const char* CredentialsToken, EOS_EExternalCredentialType CredentialsType, const EOS_Connect_UserLoginInfo* UserLoginInfo = nullptr);
 	
-	//static FOnlineEncryptedAppTicketSteamPtr GetSteamEncryptedAppTicketInterface();
+	static FOnlineEncryptedAppTicketSteamPtr GetSteamEncryptedAppTicketInterface();
 };

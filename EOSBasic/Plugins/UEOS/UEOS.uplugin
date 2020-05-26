@@ -19,11 +19,7 @@
 			"Name": "UEOS",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
-			"AdditionalDependencies": [
-        "OnlineSubsystem",
-        "OnlineSubsystemSteam"
-      ],
-			"WhitelistPlatforms": [
+      "WhitelistPlatforms": [
 				"Win64",
 				"Win32",
 				"Linux",

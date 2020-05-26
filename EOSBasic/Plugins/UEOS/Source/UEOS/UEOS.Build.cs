@@ -5,12 +5,12 @@ using System.IO;
 
 public class UEOS : ModuleRules
 {
-    public UEOS( ReadOnlyTargetRules Target ) : base( Target )
+    public UEOS(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-        PublicDefinitions.Add( "EOS_LIB=1" );
+        PublicDefinitions.Add("EOS_LIB=1");
 
-        if( Target.Configuration != UnrealTargetConfiguration.Shipping )
+        if (Target.Configuration != UnrealTargetConfiguration.Shipping)
         {
             OptimizeCode = CodeOptimization.Never;
         }
@@ -19,14 +19,14 @@ public class UEOS : ModuleRules
             new string[] {
                 Path.Combine( ModuleDirectory, "Public" )
             }
-            );
+        );
 
 
         PrivateIncludePaths.AddRange(
             new string[] {
                 Path.Combine( ModuleDirectory, "Private" )
             }
-            );
+        );
 
 
         PublicDependencyModuleNames.AddRange(
@@ -37,7 +37,7 @@ public class UEOS : ModuleRules
                 "OnlineSubsystem",
                 "OnlineSubsystemSteam"
             }
-            );
+        );
 
 
         PrivateDependencyModuleNames.AddRange(
@@ -51,14 +51,14 @@ public class UEOS : ModuleRules
                 "OnlineSubsystem",
                 "OnlineSubsystemSteam"
             }
-            );
+        );
 
 
         DynamicallyLoadedModuleNames.AddRange(
             new string[]
             {
-				// ... add any modules that your module loads dynamically here ...
-			}
-            );
+                // ... add any modules that your module loads dynamically here ...
+            }
+        );
     }
 }

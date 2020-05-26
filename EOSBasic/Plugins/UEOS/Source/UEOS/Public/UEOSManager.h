@@ -124,14 +124,6 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Manager")
 		static UEOSConnect* GetConnect();
-	
-	/**
-	* Utility to return an EOS Result as a FString.
-	*
-	* @param Result The EOS Result to attempt to convert.
-	* @return FString result of the conversion.
-	*/
-	static FString								EOSResultToString( EOS_EResult Result );
 
 
 	/// CONFIG GETTERS

@@ -509,11 +509,6 @@ UEOSConnect* UEOSManager::GetConnect()
 	return UEOSManager::EOSManager->Connect;
 }
 
-FString UEOSManager::EOSResultToString(EOS_EResult Result)
-{
-	return "";
-}
-
 void UEOSManager::EOSSDKLoggingCallback(const EOS_LogMessage* InMsg)
 {
 	FString Message(InMsg->Message);
