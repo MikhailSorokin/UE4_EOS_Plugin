@@ -24,7 +24,7 @@ void UEOSPresence::QueryFriendPresence(const FBPCrossPlayInfo& InFriendInfo)
 	EOS_Presence_QueryPresenceOptions Options;
 	Options.ApiVersion = EOS_PRESENCE_QUERYPRESENCE_API_LATEST;
 	Options.LocalUserId = UEOSManager::GetAuthentication()->GetEpicAccountId();
-	Options.TargetUserId = AccountId.FromString(InFriendInfo.IdAsString);
+	Options.TargetUserId = InFriendInfo.AccountId;
 
 	FBPCrossPlayInfo* NewFriendInfo = new FBPCrossPlayInfo(InFriendInfo);
 
@@ -141,7 +141,6 @@ void UEOSPresence::SetPresence(FEpicAccountId TargetUserId)
 
 void UEOSPresence::SetPresenceCallback(const EOS_Presence_SetPresenceCallbackInfo* Data)
 {
-	check(Data != nullptr);
 
 	UE_LOG(UEOSLog, Log, TEXT("On set presence result code: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
 
@@ -151,19 +150,32 @@ void UEOSPresence::SetPresenceCallback(const EOS_Presence_SetPresenceCallbackInf
 
 void UEOSPresence::SubscribeToFriendPresenceUpdates()
 {
+	FEpicAccountId AccountId = UEOSManager::GetEOSManager()->GetAuthentication()->GetEpicAccountId();
+	
 	EOS_HPresence PresenceHandle = EOS_Platform_GetPresenceInterface(UEOSManager::GetPlatformHandle());
 	EOS_Presence_AddNotifyOnPresenceChangedOptions Options;
 	Options.ApiVersion = EOS_PRESENCE_ADDNOTIFYONPRESENCECHANGED_API_LATEST;
-	EOS_NotificationId PresenceNotificationId = EOS_Presence_AddNotifyOnPresenceChanged(PresenceHandle, &Options, NULL, OnPresenceChangedCallback);
+	EOS_NotificationId NotificationId = EOS_Presence_AddNotifyOnPresenceChanged(PresenceHandle, &Options, NULL, OnPresenceChangedCallback);
 
-	if (!PresenceNotificationId)
+	//We add the presence status in a map for every local user that we have
+	if (!NotificationId)
 	{
 		UE_LOG(UEOSLog, Warning, TEXT("[EOS SDK]: could not subscribe to presence updates."));
 	}
-	/*else
+	else
 	{
-		PresenceNotifications[UserId] = PresenceNotificationId;
-	}*/
+		PresenceNotifications.Add(AccountId, NotificationId);
+	}
+}
+
+void UEOSPresence::UnsubscribeFromFriendPresenceUpdates(FEpicAccountId UserId)
+{
+	EOS_HPresence PresenceHandle = EOS_Platform_GetPresenceInterface(UEOSManager::GetPlatformHandle());
+
+	if (PresenceNotifications.Contains(UserId)) {
+		EOS_Presence_RemoveNotifyOnPresenceChanged(PresenceHandle, PresenceNotifications[UserId]);
+		PresenceNotifications.Remove(UserId);
+	}
 }
 
 void UEOSPresence::OnPresenceChangedCallback(const EOS_Presence_PresenceChangedCallbackInfo* Data)
@@ -180,7 +192,7 @@ void UEOSPresence::OnPresenceChangedCallback(const EOS_Presence_PresenceChangedC
 
 		FEpicAccountId PresenceUserInfo = FEpicAccountId(Data->PresenceUserId);
 		FBPCrossPlayInfo CrossPlayInfo = FBPCrossPlayInfo();
-		CrossPlayInfo.IdAsString = PresenceUserInfo.ToString();
+		CrossPlayInfo.AccountId = PresenceUserInfo;
 		CrossPlayInfo.DisplayName = EOSUserInfo->GetDisplayName(PresenceUserInfo);
 
 		FBPCrossPlayInfo* NewFriendInfo = new FBPCrossPlayInfo(CrossPlayInfo);

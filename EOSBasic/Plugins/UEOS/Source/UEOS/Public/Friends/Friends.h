@@ -45,11 +45,30 @@ public:
 	UEOSFriends();
 
 	/**
+	* Subscribes specified user to friend notification about friend-list changes.
+	*/
+	UFUNCTION(BlueprintCallable)
+		void SubscribeToFriendUpdates();
+
+	/**
+	* Unsubscribes specified user from friend notification about friend-list changes.
+	*/
+	void UnsubscribeFromFriendUpdates(FEpicAccountId UserId);
+
+
+	/**
+	 * BLUEPRINTABLE function call
 	 * Begins an async process that requests the friends count, account ids, and statuses of the local player's friends.
 	 * Broadcasts OnFriendsRefreshed when completed.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "UEOS|Friends")
-		void						QueryFriends();
+	UFUNCTION(BlueprintCallable)
+	void						QueryFriends();
+	
+	/**
+	 * Begins an async process that requests the friends count, account ids, and statuses of the local player's friends.
+	 * Broadcasts OnFriendsRefreshed when completed.
+	 */
+	void						QueryFriends(FEpicAccountId InLocalUserId);
 
 	/**
 	 * Gets the current friends count on the account you are associated with.
@@ -74,9 +93,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Friends")
 		void RejectInvite(const FEpicAccountId& FriendInfo);
 
-	UFUNCTION(BlueprintCallable, Category = "UEOS|Friends")
-		void AddNotifyFriendsHandle();
-	
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Friends")
 		EFriendStatus GetStatus(const FEpicAccountId& FriendInfo);
 
@@ -110,8 +126,21 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "UEOS|Friends")
 		FOnFriendActionError		OnFriendActionError;
 
+	UPROPERTY(BlueprintReadOnly)
+		TArray<FBPCrossPlayInfo> CrossPlayFriends;
+
+protected:
+	bool bInitialFriendQueryFinished;
+
+	/**
+	* Called from the callback of friend presence updates.
+	*/
+	void FriendStatusChanged(FEpicAccountId LocalUserId, FEpicAccountId TargetUserId, EOS_EFriendsStatus NewStatus);
+	
 private:
 
+	TMap<FEpicAccountId, EOS_NotificationId> FriendNotifications;
+	
 	static void OnFriendsUpdateCallback(const EOS_Friends_OnFriendsUpdateInfo* Data);
 
 	static void	QueryFriendsCallback( const EOS_Friends_QueryFriendsCallbackInfo* Data );

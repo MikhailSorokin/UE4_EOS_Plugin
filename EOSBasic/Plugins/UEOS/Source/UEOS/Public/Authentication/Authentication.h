@@ -9,6 +9,7 @@
 #include "eos_sdk.h"
 #include "eos_auth.h"
 #include "eos_version.h"
+#include "UEOSOnlineTypes.h"
 
 #include "Authentication.generated.h"
 
@@ -18,92 +19,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE( FOnUserLoggedIn );
 DECLARE_DYNAMIC_MULTICAST_DELEGATE( FOnUserLoggedOut );
 DECLARE_DYNAMIC_MULTICAST_DELEGATE( FOnUserLoginRequiresMFA );
-DECLARE_DYNAMIC_MULTICAST_DELEGATE( FOnUserLoginFail );
-
-/** Login Mode */
-UENUM()
-enum class ELoginMode : uint8
-{
-	LM_Unknown			UMETA( DisplayName = "Unknown" ),		/** Unknown Login Type */
-	LM_IDPassword		UMETA( DisplayName = "Password" ),		/** Login using a user id and password token */
-	LM_ExchangeCode		UMETA( DisplayName = "Exchange Code" ),	/** Login using an exchange code */
-	LM_PinGrant			UMETA( DisplayName = "Pin Grant" ),		/** Login using a pin grant */
-	LM_DevTool			UMETA( DisplayName = "Dev Tool" )		/** Login using the EOS SDK Dev Auth Tool */,
-	LM_AccountPortal    UMETA(DisplayName = "Account Portal")		/** Logins using a web portal login through your browser. */,
-};
-
-/**
-* Adapted from the sample, to work within UE4 UBT.
-*/
-USTRUCT(BlueprintType)
-struct UEOS_API FEpicAccountId
-{
-	GENERATED_BODY()
-
-	/**
-	* Construct wrapper from account id.
-	*/
-	FEpicAccountId(EOS_EpicAccountId InAccountId)
-	: EpicAccountId(InAccountId)
-	{
-		AccountIdAsString = ToString();
-	};
-
-	FEpicAccountId() = default;
-
-	FEpicAccountId(const FEpicAccountId&) = default;
-
-	FEpicAccountId& operator=(const FEpicAccountId&) = default;
-
-	bool operator==(const FEpicAccountId& Other) const
-	{
-		return EpicAccountId == Other.EpicAccountId;
-	}
-
-	bool operator!=(const FEpicAccountId& Other) const
-	{
-		return !(this->operator==(Other));
-	}
-
-	bool operator<(const FEpicAccountId& Other) const
-	{
-		return EpicAccountId < Other.EpicAccountId;
-	}
-
-	/**
-	* Checks if account ID is valid.
-	*/
-	operator bool() const;
-
-	/**
-	* Easy conversion to EOS account ID.
-	*/
-	operator EOS_EpicAccountId() const
-	{
-		return EpicAccountId;
-	}
-
-	UPROPERTY(BlueprintReadOnly)
-		FString AccountIdAsString;
-	
-	/**
-	* Prints out account ID as hex.
-	*/
-	FString						ToString() const;
-
-	/**
-	* Returns an Account ID from a String interpretation of one.
-	*
-	* @param AccountId the FString representation of an Account ID.
-	* @return FEpicAccountId An Account ID from the string, if valid.
-	*/
-	static FEpicAccountId		FromString(const FString& AccountId);
-
-	/** The EOS SDK matching Account Id. */
-	EOS_EpicAccountId			EpicAccountId;
-
-};
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam( FOnUserLoginFail , const FString&, Reason );
 
 UCLASS()
 class UEOS_API UEOSAuthentication : public UObject

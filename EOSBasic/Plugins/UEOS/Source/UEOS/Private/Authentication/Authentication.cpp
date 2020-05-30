@@ -39,6 +39,7 @@ void UEOSAuthentication::Login( ELoginMode LoginMode, FString UserId, FString Us
 	Credentials.ApiVersion = EOS_AUTH_CREDENTIALS_API_LATEST;
 
 	EOS_Auth_LoginOptions LoginOptions;
+	LoginOptions.ScopeFlags = EOS_EAuthScopeFlags::EOS_AS_BasicProfile | EOS_EAuthScopeFlags::EOS_AS_FriendsList | EOS_EAuthScopeFlags::EOS_AS_Presence;
 	memset( &LoginOptions, 0, sizeof( LoginOptions ) );
 	LoginOptions.ApiVersion = EOS_AUTH_LOGIN_API_LATEST;
 
@@ -217,7 +218,7 @@ void UEOSAuthentication::LoginCompleteCallback( const EOS_Auth_LoginCallbackInfo
 		// Broadcast the Login Failure Delegate.
 		if( UEOSManager::GetAuthentication()->OnUserLoginFail.IsBound() )
 		{
-			UEOSManager::GetAuthentication()->OnUserLoginFail.Broadcast();
+			UEOSManager::GetAuthentication()->OnUserLoginFail.Broadcast(*UEOSCommon::EOSResultToString(Data->ResultCode));
 		}
 	}
 }

@@ -9,87 +9,7 @@
 #include "eos_presence.h"
 #include "eos_presence_types.h"
 
-#include "Friends/Friends.h"
-
 #include "Presence.generated.h"
-
-/** The current status of a friend's online presence.  EPresenceStatus as a UENUM. */
-UENUM(BlueprintType)
-enum class EPresenceStatus : uint8
-{
-	Offline = 0			UMETA(DisplayName = "Offline"),		/** Offline Presence */
-	Online	= 1			UMETA(DisplayName = "Online"),		/** Online Presence */
-	Away	= 2			UMETA(DisplayName = "Away"),		/** Away Presence */
-	ExtendedAway = 3	UMETA(DisplayName = "ExtendedAway"),/** Extended Away - Longer than 1 hour away **/
-	DoNotDisturb = 4	UMETA(DisplayName = "DND")			/** Do not Disturb **/
-};
-
-//TODO - Format
-UENUM(BlueprintType)
-enum class EPlatformType : uint8
-{
-	Epic = 0,
-	Steam = 1,
-	Oculus = 2,
-	Playstation = 3,
-	OTHER = 4
-};
-
-USTRUCT(BlueprintType)
-struct FBPCrossPlayInfo
-{
-
-	GENERATED_USTRUCT_BODY()
-
-	FBPCrossPlayInfo() = default;
-
-	FBPCrossPlayInfo(const FBPCrossPlayInfo&) = default;
-
-	FBPCrossPlayInfo& operator=(const FBPCrossPlayInfo&) = default;
-	
-	bool operator==(const FBPCrossPlayInfo& Other) const
-	{
-		return IdAsString == Other.IdAsString;
-	}
-
-	bool operator!=(const FBPCrossPlayInfo& Other) const
-	{
-		return !(this->operator==(Other));
-	}
-
-	bool operator<(const FBPCrossPlayInfo& Other) const
-	{
-		return IdAsString < Other.IdAsString;
-	}
-
-	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
-		FString IdAsString;
-
-	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
-		FString DisplayName;
-
-	UPROPERTY(BlueprintReadOnly, Category = "UEOS|Friends|CrossPlay")
-		EPresenceStatus Presence;
-
-	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
-		FString PresenceString;
-	
-	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
-		EPlatformType PlatformType = EPlatformType::Epic;
-
-	/**
-	* Returns an Account ID from a String interpretation of one.
-	*
-	* @param AccountId the FString representation of an Account ID.
-	* @return FEpicAccountId An Account ID from the string, if valid.
-	*/
-	/*static FEpicAccountId		FromString(const FString& AccountId)
-	{
-		EOS_EpicAccountId Account = EOS_EpicAccountId_FromString(TCHAR_TO_ANSI(*AccountId));
-		return FEpicAccountId(Account);
-	}*/
-};
-
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam( FOnFriendPresenceQueryComplete, const FBPCrossPlayInfo&, CompleteFriendInfo);
 
@@ -110,9 +30,13 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Presence")
 		void SubscribeToFriendPresenceUpdates();
+	
+	void UnsubscribeFromFriendPresenceUpdates(FEpicAccountId UserId);
 
 	UPROPERTY( BlueprintAssignable , Category = "UEOS|Presence")
 		FOnFriendPresenceQueryComplete OnFriendPresenceQueryComplete;
+
+	TMap<FEpicAccountId, EOS_NotificationId> PresenceNotifications;
 
 protected:
 

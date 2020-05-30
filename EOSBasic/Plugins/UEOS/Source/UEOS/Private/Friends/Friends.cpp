@@ -8,10 +8,73 @@
 #include "UEOSModule.h"
 #include "UEOSManager.h"
 #include "UserInfo/UserInfo.h"
+#include "Presence/Presence.h"
 
 UEOSFriends::UEOSFriends()
 {
 
+}
+
+void UEOSFriends::SubscribeToFriendUpdates()
+{
+	FEpicAccountId AccountId = UEOSManager::GetEOSManager()->GetAuthentication()->GetEpicAccountId();
+	UnsubscribeFromFriendUpdates(AccountId);
+
+	//Subscribe for friend status updates
+	EOS_Friends_AddNotifyFriendsUpdateOptions Options;
+	Options.ApiVersion = EOS_FRIENDS_ADDNOTIFYFRIENDSUPDATE_API_LATEST;
+
+	EOS_HFriends FriendsHandle = EOS_Platform_GetFriendsInterface(UEOSManager::GetPlatformHandle());
+
+	//We add the friend status in a map for every local user that we have
+	EOS_NotificationId NotificationId = EOS_Friends_AddNotifyFriendsUpdate(FriendsHandle, &Options, NULL, OnFriendsUpdateCallback);
+	if (!NotificationId)
+	{
+		UE_LOG(UEOSLog, Error, TEXT("[EOS SDK]: could not subscribe to friend updates."));
+	}
+	else
+	{
+		FriendNotifications.Add(AccountId, NotificationId);
+	}
+
+	UEOSManager::GetEOSManager()->GetPresence()->SubscribeToFriendPresenceUpdates();
+}
+
+
+void UEOSFriends::OnFriendsUpdateCallback(const EOS_Friends_OnFriendsUpdateInfo* Data)
+{
+	// NOTE: SendInvite, AcceptInvite, RejectInvite, AddFriend and RemoveFriend will force updates here
+	UEOSManager::GetFriends()->FriendStatusChanged(Data->LocalUserId, Data->TargetUserId, Data->CurrentStatus);
+}
+
+void UEOSFriends::FriendStatusChanged(FEpicAccountId LocalUserId, FEpicAccountId TargetUserId, EOS_EFriendsStatus NewStatus)
+{
+	for (FBPCrossPlayInfo& CrossPlayFriend : CrossPlayFriends)
+	{
+		if (CrossPlayFriend.AccountId == TargetUserId)
+		{
+			//TODO - See if this actually transfers properly
+			EBPFriendStatus BPNewFriendStatus = (EBPFriendStatus)NewStatus;
+			if (CrossPlayFriend.FriendshipStatus != BPNewFriendStatus)
+			{
+				CrossPlayFriend.FriendshipStatus = BPNewFriendStatus;
+			}
+			return;
+		}
+	}
+
+	//Either no such friend, or need to query a new friends list to refresh list (must be new friend?) unless initial friend query is not finished yet.
+	QueryFriends(LocalUserId);
+}
+void UEOSFriends::UnsubscribeFromFriendUpdates(FEpicAccountId UserId)
+{
+	EOS_HFriends FriendsHandle = EOS_Platform_GetFriendsInterface(UEOSManager::GetPlatformHandle());
+
+	if (FriendNotifications.Contains(UserId)) {
+		EOS_Friends_RemoveNotifyFriendsUpdate(FriendsHandle, FriendNotifications[UserId]);
+		FriendNotifications.Remove(UserId);
+	}
+	UEOSManager::GetPresence()->UnsubscribeFromFriendPresenceUpdates(UserId);
 }
 
 void UEOSFriends::QueryFriends()
@@ -19,7 +82,17 @@ void UEOSFriends::QueryFriends()
 	EOS_HFriends FriendsHandle = EOS_Platform_GetFriendsInterface(UEOSManager::GetPlatformHandle());
 	EOS_Friends_QueryFriendsOptions Options;
 	Options.ApiVersion = EOS_FRIENDS_QUERYFRIENDS_API_LATEST;
-	Options.LocalUserId = UEOSManager::GetEOSManager()->GetAuthentication()->GetEpicAccountId();
+	Options.LocalUserId = UEOSManager::GetAuthentication()->GetEpicAccountId();
+	EOS_Friends_QueryFriends(FriendsHandle, &Options, nullptr, QueryFriendsCallback);
+
+}
+
+void UEOSFriends::QueryFriends(FEpicAccountId InLocalUserId)
+{
+	EOS_HFriends FriendsHandle = EOS_Platform_GetFriendsInterface(UEOSManager::GetPlatformHandle());
+	EOS_Friends_QueryFriendsOptions Options;
+	Options.ApiVersion = EOS_FRIENDS_QUERYFRIENDS_API_LATEST;
+	Options.LocalUserId = InLocalUserId;
 	EOS_Friends_QueryFriends( FriendsHandle, &Options, nullptr, QueryFriendsCallback );
 
 }
@@ -32,7 +105,49 @@ void UEOSFriends::QueryFriendsCallback( const EOS_Friends_QueryFriendsCallbackIn
 		{
 			if (Data->ResultCode == EOS_EResult::EOS_Success)
 			{
-				EOSFriends->OnFriendsRefreshed.Broadcast();
+				int32_t FriendCount = UEOSManager::GetFriends()->GetFriendsCount();
+
+				EOS_HFriends FriendsHandle = EOS_Platform_GetFriendsInterface(UEOSManager::GetPlatformHandle());
+
+				TArray<FBPCrossPlayInfo> NewFriends;
+				
+				EOS_Friends_GetFriendAtIndexOptions IndexOptions;
+				IndexOptions.ApiVersion = EOS_FRIENDS_GETFRIENDATINDEX_API_LATEST;
+				IndexOptions.LocalUserId = Data->LocalUserId;
+
+				for (int32_t FriendIdx = 0; FriendIdx < FriendCount; ++FriendIdx)
+				{
+					IndexOptions.Index = FriendIdx;
+
+					EOS_EpicAccountId FriendUserId = EOS_Friends_GetFriendAtIndex(FriendsHandle, &IndexOptions);
+
+					if (EOS_EpicAccountId_IsValid(FriendUserId))
+					{
+						EOS_Friends_GetStatusOptions StatusOptions;
+						StatusOptions.ApiVersion = EOS_FRIENDS_GETSTATUS_API_LATEST;
+						StatusOptions.LocalUserId = Data->LocalUserId;
+						StatusOptions.TargetUserId = FriendUserId;
+
+						EOS_EFriendsStatus FriendStatus = EOS_Friends_GetStatus(FriendsHandle, &StatusOptions);
+
+						UE_LOG(UEOSLog, Log, TEXT("[EOS SDK] FriendStatus: %s"), *FEpicAccountId(FriendUserId).ToString());
+
+						FBPCrossPlayInfo FriendDataEntry;
+						FriendDataEntry.AccountId = FriendUserId;
+						//NOTE: We only get the actual info from the account IDs
+						FriendDataEntry.DisplayName = "Pending...";
+						UEOSManager::GetUserInfo()->QueryUserInfoByAccountId(FriendUserId);
+						FriendDataEntry.FriendshipStatus = (EBPFriendStatus)FriendStatus;
+
+						NewFriends.Add(FriendDataEntry);
+					} else
+					{
+						UE_LOG(UEOSLog, Error, TEXT("%s [EOS SDK | Plugin] Friend ID on iteration: %d was invalid!"), __FUNCTIONW__, FriendIdx);
+					}
+				}
+
+				UEOSManager::GetFriends()->CrossPlayFriends = NewFriends;
+				//TODO - Figure out what account friends are connected to and do query mappings
 			}
 			else
 			{
@@ -208,18 +323,3 @@ EFriendStatus UEOSFriends::GetStatus( const FEpicAccountId& FriendInfo)
 }
 
 
-
-void UEOSFriends::AddNotifyFriendsHandle()
-{
-	EOS_HFriends FriendsHandle = EOS_Platform_GetFriendsInterface(UEOSManager::GetPlatformHandle());
-	EOS_Friends_AddNotifyFriendsUpdateOptions Options;
-	Options.ApiVersion = EOS_FRIENDS_ADDNOTIFYFRIENDSUPDATE_API_LATEST;
-	EOS_Friends_AddNotifyFriendsUpdate(FriendsHandle, &Options, NULL, OnFriendsUpdateCallback);
-}
-
-void UEOSFriends::OnFriendsUpdateCallback(const EOS_Friends_OnFriendsUpdateInfo* Data)
-{
-	check(Data != nullptr);
-
-	//TODO - This will have to be used in combination with AddFriend and RemoveFriend
-}
