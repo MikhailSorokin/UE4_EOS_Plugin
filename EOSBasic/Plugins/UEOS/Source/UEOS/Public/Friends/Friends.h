@@ -53,7 +53,8 @@ public:
 	/**
 	* Unsubscribes specified user from friend notification about friend-list changes.
 	*/
-	void UnsubscribeFromFriendUpdates(FEpicAccountId UserId);
+	UFUNCTION(BlueprintCallable)
+		void UnsubscribeFromFriendUpdates(FEpicAccountId UserId);
 
 
 	/**
@@ -126,8 +127,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "UEOS|Friends")
 		FOnFriendActionError		OnFriendActionError;
 
-	UPROPERTY(BlueprintReadOnly)
-		TArray<FBPCrossPlayInfo> CrossPlayFriends;
+	/* Temporary because it has to be filled in completely by UserInfo & Presence! */
+	UPROPERTY(BlueprintReadWrite)
+		TArray<FBPCrossPlayInfo> TempCrossPlayFriends;
 
 protected:
 	bool bInitialFriendQueryFinished;

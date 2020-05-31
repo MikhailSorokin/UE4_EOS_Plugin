@@ -22,29 +22,33 @@ public:
 
 	UEOSPresence();
 
+	/* Queries for ALL the friends. We can then do a subscribe call afterwords to get any updates. */
 	UFUNCTION( BlueprintCallable, Category = "UEOS|Presence" )
-		void QueryFriendPresence( const FBPCrossPlayInfo& InFriendInfo );
+		void QueryFriendsPresenceInfo();
 
+protected:
+	void QueryPresenceInfo(FEpicAccountId LocalAccount, FEpicAccountId FriendAccount);
+
+public:
 	/**
 	 * Begins an async process that requests the presence statuses of the friends.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "UEOS|Presence")
-		void SubscribeToFriendPresenceUpdates();
+	void SubscribeToFriendPresenceUpdates();
 	
 	void UnsubscribeFromFriendPresenceUpdates(FEpicAccountId UserId);
 
 	UPROPERTY( BlueprintAssignable , Category = "UEOS|Presence")
 		FOnFriendPresenceQueryComplete OnFriendPresenceQueryComplete;
 
+protected:
+	// Presence account for each local player that wants to subscribe to updates
 	TMap<FEpicAccountId, EOS_NotificationId> PresenceNotifications;
 
-protected:
-
-	static FBPCrossPlayInfo UpdatePresenceStatus(FBPCrossPlayInfo& InFriendInfo, FEpicAccountId TargetId);
+	static FBPPresenceInfo UpdatePresenceStatus(FEpicAccountId LocalId, FEpicAccountId FriendId);
 
 	static void SetPresenceCallback(const EOS_Presence_SetPresenceCallbackInfo* Data);
 
-	static void QueryPresenceCompleteCallback(const EOS_Presence_QueryPresenceCallbackInfo* Data);
+	static void QueryUserPresenceCompleteCallback(const EOS_Presence_QueryPresenceCallbackInfo* Data);
 
 	static void OnPresenceChangedCallback(const EOS_Presence_PresenceChangedCallbackInfo* Data);
 

@@ -133,11 +133,43 @@ enum class EPlatformType : uint8
 	Other = 4
 };
 
+/* Presence Info struct that is needed in the friends class. */
+USTRUCT(BlueprintType)
+struct FBPPresenceInfo
+{
+	GENERATED_USTRUCT_BODY()
+	
+	/** Presence status */
+	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
+		EPresenceStatus Presence;
+
+	/** Rich text - honestly not sure what this is */
+	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
+		FString RichText;
+
+	/** Tells user what application one is playing. */
+	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
+		FString Application;
+
+	/** Platform the user is logged in on */
+	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
+		FString Platform;
+	
+	/** Equaity operator */
+	bool operator==(const FBPPresenceInfo& Other) const
+	{
+		return Presence == Other.Presence &&
+			RichText == Other.RichText &&
+			Application == Other.Application &&
+			Platform == Other.Platform;
+	}
+};
+
 USTRUCT(BlueprintType)
 struct FBPCrossPlayInfo
 {
 
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	FBPCrossPlayInfo() = default;
 
@@ -161,7 +193,7 @@ struct FBPCrossPlayInfo
 	}
 
 	//TODO - Possibly will have to use productId rather than accountId? Maybe have both?
-	UPROPERTY(BlueprintReadOnly, Category = "UEOS|Friends|CrossPlay")
+	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
 		FEpicAccountId AccountId;
 
 	/* Status of friendship of this account in relation to us */
@@ -171,11 +203,9 @@ struct FBPCrossPlayInfo
 	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
 		FString DisplayName;
 
-	UPROPERTY(BlueprintReadOnly, Category = "UEOS|Friends|CrossPlay")
-		EPresenceStatus Presence;
-
+	/* Full presence information including platform type, application, status, rich text. */
 	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
-		FString PresenceString;
+		FBPPresenceInfo Presence;
 
 	UPROPERTY(BlueprintReadWrite, Category = "UEOS|Friends|CrossPlay")
 		EPlatformType PlatformType = EPlatformType::Epic;

@@ -49,7 +49,7 @@ void UEOSFriends::OnFriendsUpdateCallback(const EOS_Friends_OnFriendsUpdateInfo*
 
 void UEOSFriends::FriendStatusChanged(FEpicAccountId LocalUserId, FEpicAccountId TargetUserId, EOS_EFriendsStatus NewStatus)
 {
-	for (FBPCrossPlayInfo& CrossPlayFriend : CrossPlayFriends)
+	for (FBPCrossPlayInfo& CrossPlayFriend : TempCrossPlayFriends)
 	{
 		if (CrossPlayFriend.AccountId == TargetUserId)
 		{
@@ -64,7 +64,9 @@ void UEOSFriends::FriendStatusChanged(FEpicAccountId LocalUserId, FEpicAccountId
 	}
 
 	//Either no such friend, or need to query a new friends list to refresh list (must be new friend?) unless initial friend query is not finished yet.
-	QueryFriends(LocalUserId);
+	if (bInitialFriendQueryFinished) {
+		QueryFriends(LocalUserId);
+	}
 }
 void UEOSFriends::UnsubscribeFromFriendUpdates(FEpicAccountId UserId)
 {
@@ -146,7 +148,9 @@ void UEOSFriends::QueryFriendsCallback( const EOS_Friends_QueryFriendsCallbackIn
 					}
 				}
 
-				UEOSManager::GetFriends()->CrossPlayFriends = NewFriends;
+				//NOTE: Temp because display name is pending - need UserInfo query to finish that off
+				UEOSManager::GetFriends()->TempCrossPlayFriends = NewFriends;
+				UEOSManager::GetFriends()->bInitialFriendQueryFinished = true;
 				//TODO - Figure out what account friends are connected to and do query mappings
 			}
 			else
