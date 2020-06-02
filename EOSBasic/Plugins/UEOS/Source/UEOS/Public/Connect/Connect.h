@@ -144,9 +144,6 @@ protected:
 	// Similar to authentication, stores the credentials associated with login
 	FEpicProductId EpicProductId;
 
-	// Similar to authentication, signifies one has been authorized to access information of an account.
-	bool bAuthorized;
-
 	// Unique to connect interface, lets one know if one has linked this account to other subsystems.
 	bool bLinkedAccount;
 
@@ -169,6 +166,11 @@ public:
 		void InitializeParameters(FString InPlayerDisplayName);
 	
 	const FString EnumToString(const TCHAR* Enum, int32 EnumValue);
+
+	FEpicProductId FORCEINLINE GetProductId() const { return EpicProductId;  }
+	
+	// Similar to authentication, signifies one has been authorized to access information of an account connected to EAS.
+	bool bAuthorized;
 
 	/**
 	* Attempts to login to the EOS Connect interface using the specified type of credentials (also known as: Identity Provider).

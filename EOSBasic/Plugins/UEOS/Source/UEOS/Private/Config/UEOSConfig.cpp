@@ -14,13 +14,7 @@ UEOSConfig::UEOSConfig()
 	, bIsServer( false )
 	, LogLevel( ELogLevel::LL_VeryVerbose )
 {
-	/*UTextReaderComponent* TextReader = CreateDefaultSubobject<UTextReaderComponent>(TEXT("TextReaderComp"));
-	
-	ProductId = TextReader->ReadFile("Credentials/ProductId.txt");
-	SandboxId = TextReader->ReadFile("Credentials/SandboxId.txt");
-	DeploymentId = TextReader->ReadFile("Credentials/DeploymentId.txt");
-	ClientId = TextReader->ReadFile("Credentials/ClientId.txt");
-	ClientSecret = TextReader->ReadFile("Credentials/ClientSecretId.txt");*/
+
 	//UE_LOG(UEOSLog, Log, TEXT("HERE"));
 }
 

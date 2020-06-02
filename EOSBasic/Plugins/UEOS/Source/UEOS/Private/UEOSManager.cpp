@@ -41,9 +41,23 @@ UEOSManager::UEOSManager()
 	, Metrics(nullptr)
 	, Friends(nullptr)
 	, UserInfo(nullptr)
-	, bUseConfig(true)
+	, bUseConfig(false)
 {
+	UTextReaderComponent* TextReader = CreateDefaultSubobject<UTextReaderComponent>(TEXT("TextReaderComp"));
 
+	FString ProductId = TextReader->ReadFile("ProductId.txt");
+	FString SandboxId = TextReader->ReadFile("SandboxId.txt");
+	FString DeploymentId = TextReader->ReadFile("DeploymentId.txt");
+	FString ClientId = TextReader->ReadFile("ClientId.txt");
+	FString ClientSecret = TextReader->ReadFile("ClientSecretId.txt");
+
+	EOSConfig = GetMutableDefault<UEOSConfig>();
+	EOSConfig->SetVariables(ProductId, DeploymentId, SandboxId, ClientId, ClientSecret);
+	
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, ProductId);
+	}
 }
 
 bool UEOSManager::RequestEOSManager(UEOSManager*& ActiveEOSManager, UObject* WorldContextObject)
@@ -122,8 +136,6 @@ EEOSResults UEOSManager::InitEOS()
 		return EEOSResults::ER_AlreadyShutdown;
 	}
 
-	UEOSConfig* EOSConfig = GetMutableDefault<UEOSConfig>();
-
 	// Defaults - if none are set in the Config.
 	std::string ProductName = "UEOS Plugin";
 	std::string ProductVersion = "0.3";
@@ -190,8 +202,6 @@ EEOSResults UEOSManager::InitEOS()
 	{
 		PlatformOptions.bIsServer = (EOSConfig->bIsServer) ? EOS_TRUE : EOS_FALSE;
 
-		UTextReaderComponent* TextReader = NewObject<UTextReaderComponent>();
-
 		UE_LOG(UEOSLog, Log, TEXT("HERE"));
 
 		std::string ProductId = "";
@@ -205,13 +215,18 @@ EEOSResults UEOSManager::InitEOS()
 		}
 		else {
 
-			FString ReadProductId = TextReader->ReadFile("Credentials/ProductId.txt");
+			/*FString ReadProductId = TextReader->ReadFile("Credentials/ProductId.txt");
 			FString ReadSandboxId = TextReader->ReadFile("Credentials/SandboxId.txt");
 			FString ReadDeploymentId = TextReader->ReadFile("Credentials/DeploymentId.txt");
 
 			ProductId = TCHAR_TO_UTF8(*ReadProductId);
 			SandboxId = TCHAR_TO_UTF8(*ReadSandboxId);
 			DeploymentId = TCHAR_TO_UTF8(*ReadDeploymentId);
+			*/
+
+			ProductId = TCHAR_TO_UTF8(*EOSConfig->ProductId);
+			SandboxId = TCHAR_TO_UTF8(*EOSConfig->SandboxId);
+			DeploymentId = TCHAR_TO_UTF8(*EOSConfig->DeploymentId);
 		}
 
 		if (ProductId.empty())
@@ -251,17 +266,16 @@ EEOSResults UEOSManager::InitEOS()
 		}
 		else
 		{
-			FString ReadClientId = TextReader->ReadFile("Credentials/ClientId.txt");
+			/*FString ReadClientId = TextReader->ReadFile("Credentials/ClientId.txt");
 			FString ReadClientSecret = TextReader->ReadFile("Credentials/ClientSecretId.txt");
 
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ReadClientId);
-
-
 			ClientId = TCHAR_TO_UTF8(*ReadClientId);
-			ClientSecret = TCHAR_TO_UTF8(*ReadClientSecret);
+			ClientSecret = TCHAR_TO_UTF8(*ReadClientSecret);*/
+
+			ClientId = TCHAR_TO_UTF8(*EOSConfig->ClientId);
+			ClientSecret = TCHAR_TO_UTF8(*EOSConfig->ClientSecret);
 
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ClientId.c_str());
-
 
 		}
 
@@ -507,6 +521,23 @@ UEOSConnect* UEOSManager::GetConnect()
 	}
 
 	return UEOSManager::EOSManager->Connect;
+}
+
+UEOSLobby* UEOSManager::GetLobby()
+{
+	if (UEOSManager::EOSManager->Lobby == nullptr)
+	{
+		UEOSManager::EOSManager->Lobby = NewObject<UEOSLobby>(UEOSManager::EOSManager);
+	}
+
+	if (UEOSManager::EOSManager->Lobby == nullptr)
+	{
+		// Failed to instantiate the UserInfo object.
+		FString MessageText = FString::Printf(TEXT("[EOS SDK | Plugin] Failed to create Connect Object."));
+		UE_LOG(UEOSLog, Warning, TEXT("%s"), *MessageText);
+	}
+
+	return UEOSManager::EOSManager->Lobby;
 }
 
 void UEOSManager::EOSSDKLoggingCallback(const EOS_LogMessage* InMsg)

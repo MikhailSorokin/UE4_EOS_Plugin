@@ -14,11 +14,12 @@ FString UTextReaderComponent::ReadFile(FString filePath)
 {
 	//FPaths::ProjectDir()
 	//Read file from [project]/filePath/
-	FString directory = FPaths::ProjectDir();
+	FString directory = FPaths::Combine(FPaths::ProjectContentDir(), TEXT("Credentials"));
+	//FString directory = FPaths::ProjectContentDir();
 	FString result= "";
 	IPlatformFile& file = FPlatformFileManager::Get().GetPlatformFile();
-	if (file.DirectoryExists(*directory)) {
-		FString myFile = directory + filePath;
+	if (file.CreateDirectory(*directory)) {
+		FString myFile = directory + "/" + filePath;
 
 		if (GEngine) {
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Attempting to locate: " + myFile);
@@ -26,6 +27,10 @@ FString UTextReaderComponent::ReadFile(FString filePath)
 		}
 			
 		FFileHelper::LoadFileToString(result, *myFile);
+
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Result: " + result);
+		}
 	}
 	return result;
 }

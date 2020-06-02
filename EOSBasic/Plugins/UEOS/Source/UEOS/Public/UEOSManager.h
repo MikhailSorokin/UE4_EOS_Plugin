@@ -5,6 +5,8 @@
 // EOS Includes
 #include "UEOSCommon.h"
 #include "Config/UEOSConfig.h"
+#include "Lobby/Lobby.h"
+
 
 #include "UEOSManager.generated.h"
 
@@ -125,6 +127,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Manager")
 		static UEOSConnect* GetConnect();
 
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Manager")
+		static UEOSLobby* GetLobby();
 
 	/// CONFIG GETTERS
 
@@ -185,10 +189,6 @@ public:
 	UFUNCTION( BlueprintCallable, Category = "UEOS|Manager" )
 		bool							       	UpdateEOS();
 
-	//TODO - Get back to work in
-	/*UFUNCTION(BlueprintCallable, Category = "UEOS|Manager")
-	static UEOSConnect* GetConnect();*/
-
 protected:
 
 	// --------------------------------------------------------------
@@ -214,11 +214,6 @@ protected:
 	UPROPERTY()
 		bool									bEOSShutdown;
 
-	//TODO - Put in
-	/** The current Connect object. */
-	/*UPROPERTY()
-		UEOSConnect* Connect;*/
-	
 	/** The current Authentication object. */
 	UPROPERTY()
 		UEOSAuthentication*						Authentication;
@@ -243,10 +238,18 @@ protected:
 	UPROPERTY()
 		UEOSConnect*							Connect;
 
+	/** The current Lobby object. */
+	UPROPERTY()
+		UEOSLobby* Lobby;
+
 protected:
 
 	/* Whether or not we want to read from the Config directory or read from text files of the secret keys. */
 	bool									bUseConfig;
+
+	/** The current Lobby object. */
+	UPROPERTY()
+		UEOSConfig* EOSConfig;
 
 private:
 
