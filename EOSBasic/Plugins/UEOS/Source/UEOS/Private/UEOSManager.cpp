@@ -41,22 +41,24 @@ UEOSManager::UEOSManager()
 	, Metrics(nullptr)
 	, Friends(nullptr)
 	, UserInfo(nullptr)
-	, bUseConfig(false)
 {
 	UTextReaderComponent* TextReader = CreateDefaultSubobject<UTextReaderComponent>(TEXT("TextReaderComp"));
 
-	FString ProductId = TextReader->ReadFile("ProductId.txt");
-	FString SandboxId = TextReader->ReadFile("SandboxId.txt");
-	FString DeploymentId = TextReader->ReadFile("DeploymentId.txt");
-	FString ClientId = TextReader->ReadFile("ClientId.txt");
-	FString ClientSecret = TextReader->ReadFile("ClientSecretId.txt");
-
 	EOSConfig = GetMutableDefault<UEOSConfig>();
-	EOSConfig->SetVariables(ProductId, DeploymentId, SandboxId, ClientId, ClientSecret);
-	
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, ProductId);
+
+	if (EOSConfig->bReadFiles) {
+		FString ProductId = TextReader->ReadFile("ProductId.txt");
+		FString SandboxId = TextReader->ReadFile("SandboxId.txt");
+		FString DeploymentId = TextReader->ReadFile("DeploymentId.txt");
+		FString ClientId = TextReader->ReadFile("ClientId.txt");
+		FString ClientSecret = TextReader->ReadFile("ClientSecretId.txt");
+
+		EOSConfig->SetVariables(ProductId, DeploymentId, SandboxId, ClientId, ClientSecret);
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, "Use config: " + FString::FromInt(EOSConfig->bReadFiles));
+		}
 	}
 }
 
@@ -204,30 +206,9 @@ EEOSResults UEOSManager::InitEOS()
 
 		UE_LOG(UEOSLog, Log, TEXT("HERE"));
 
-		std::string ProductId = "";
-		std::string SandboxId = "";
-		std::string DeploymentId = "";
-		if (bUseConfig)
-		{
-			ProductId = TCHAR_TO_UTF8(*EOSConfig->ProductId);
-			SandboxId = TCHAR_TO_UTF8(*EOSConfig->SandboxId);
-			DeploymentId = TCHAR_TO_UTF8(*EOSConfig->DeploymentId);
-		}
-		else {
-
-			/*FString ReadProductId = TextReader->ReadFile("Credentials/ProductId.txt");
-			FString ReadSandboxId = TextReader->ReadFile("Credentials/SandboxId.txt");
-			FString ReadDeploymentId = TextReader->ReadFile("Credentials/DeploymentId.txt");
-
-			ProductId = TCHAR_TO_UTF8(*ReadProductId);
-			SandboxId = TCHAR_TO_UTF8(*ReadSandboxId);
-			DeploymentId = TCHAR_TO_UTF8(*ReadDeploymentId);
-			*/
-
-			ProductId = TCHAR_TO_UTF8(*EOSConfig->ProductId);
-			SandboxId = TCHAR_TO_UTF8(*EOSConfig->SandboxId);
-			DeploymentId = TCHAR_TO_UTF8(*EOSConfig->DeploymentId);
-		}
+		std::string ProductId = TCHAR_TO_UTF8(*EOSConfig->ProductId);
+		std::string SandboxId = TCHAR_TO_UTF8(*EOSConfig->SandboxId);
+		std::string DeploymentId = TCHAR_TO_UTF8(*EOSConfig->DeploymentId);
 
 		if (ProductId.empty())
 		{
@@ -257,32 +238,11 @@ EEOSResults UEOSManager::InitEOS()
 		PlatformOptions.SandboxId = SandboxId.c_str();
 		PlatformOptions.DeploymentId = DeploymentId.c_str();
 
-		std::string ClientId = "";
-		std::string ClientSecret = "";
-		if (bUseConfig)
-		{
-			ClientId = TCHAR_TO_UTF8(*EOSConfig->ClientId);
-			ClientSecret = TCHAR_TO_UTF8(*EOSConfig->ClientSecret);
-		}
-		else
-		{
-			/*FString ReadClientId = TextReader->ReadFile("Credentials/ClientId.txt");
-			FString ReadClientSecret = TextReader->ReadFile("Credentials/ClientSecretId.txt");
-
-			ClientId = TCHAR_TO_UTF8(*ReadClientId);
-			ClientSecret = TCHAR_TO_UTF8(*ReadClientSecret);*/
-
-			ClientId = TCHAR_TO_UTF8(*EOSConfig->ClientId);
-			ClientSecret = TCHAR_TO_UTF8(*EOSConfig->ClientSecret);
-
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ClientId.c_str());
-
-		}
+		std::string ClientId = TCHAR_TO_UTF8(*EOSConfig->ClientId);
+		std::string ClientSecret = TCHAR_TO_UTF8(*EOSConfig->ClientSecret);
 
 		PlatformOptions.ClientCredentials.ClientId = ClientId.c_str();
 		PlatformOptions.ClientCredentials.ClientSecret = ClientSecret.c_str();
-
-		EOSConfig->SetVariables(ProductId.c_str(), DeploymentId.c_str(), SandboxId.c_str(), ClientId.c_str(), ClientSecret.c_str());
 
 #if ALLOW_RESERVED_PLATFORM_OPTIONS
 		SetReservedPlatformOptions(PlatformOptions);

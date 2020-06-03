@@ -11,6 +11,7 @@ UEOSConfig::UEOSConfig()
 	, DeploymentId( "" )
 	, ClientId( "" )
 	, ClientSecret( "" )
+	, bReadFiles(false)
 	, bIsServer( false )
 	, LogLevel( ELogLevel::LL_VeryVerbose )
 {

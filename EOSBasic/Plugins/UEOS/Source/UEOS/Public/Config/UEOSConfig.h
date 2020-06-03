@@ -76,6 +76,11 @@ public:
 	UPROPERTY( config, EditAnywhere, Category = "UEOS" )
 		bool		bIsServer;
 
+
+	/* Whether or not we want to read from text files of the secret keys, located in Content/Credentials. */
+	UPROPERTY(Config)
+		bool									bReadFiles;
+
 	/** The Log Level.  Defaults to Very Verbose. */
 	UPROPERTY( config, EditAnywhere, BlueprintReadWrite, Category = "UEOS" )
 		ELogLevel	LogLevel;

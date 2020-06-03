@@ -10,27 +10,29 @@ UTextReaderComponent::UTextReaderComponent()
 
 }
 
+
 FString UTextReaderComponent::ReadFile(FString filePath)
 {
-	//FPaths::ProjectDir()
 	//Read file from [project]/filePath/
-	FString directory = FPaths::Combine(FPaths::ProjectContentDir(), TEXT("Credentials"));
-	//FString directory = FPaths::ProjectContentDir();
-	FString result= "";
+	FString FolderPath = FPaths::ProjectContentDir() + "Credentials";
+	FString Directory = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*FolderPath);
+
+	FString Result = "";
 	IPlatformFile& file = FPlatformFileManager::Get().GetPlatformFile();
-	if (file.CreateDirectory(*directory)) {
-		FString myFile = directory + "/" + filePath;
+	if (file.CreateDirectory(*Directory)) {
+		FString myFile = Directory + "/" + filePath;
 
 		if (GEngine) {
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Attempting to locate: " + myFile);
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "in directory: " + directory);
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Green, "Attempting to locate: " + myFile);
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Green, "in directory: " + Directory);
 		}
-			
-		FFileHelper::LoadFileToString(result, *myFile);
+
+		FFileHelper::LoadFileToString(Result, *myFile);
 
 		if (GEngine) {
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Result: " + result);
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Green, "Result: " + Result);
 		}
 	}
-	return result;
+
+	return Result;
 }
