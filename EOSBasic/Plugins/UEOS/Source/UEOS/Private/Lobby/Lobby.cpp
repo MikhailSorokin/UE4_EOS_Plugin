@@ -12,6 +12,8 @@ void UEOSLobby::CreateLobby(int32 InLobbyMembers)
 	{
 		UE_LOG(UEOSLog, Error, TEXT("%s: You have not connected to your EAS account! Unknown how to authorize."), __FUNCTIONW__);
 	}
+
+	UE_LOG(UEOSLog, Log, TEXT("%s: lobby being created."), __FUNCTIONW__);
 	
 	EOS_Lobby_CreateLobbyOptions Options = EOS_Lobby_CreateLobbyOptions();
 	Options.ApiVersion = EOS_LOBBY_CREATELOBBY_API_LATEST;
@@ -29,7 +31,7 @@ void UEOSLobby::CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
 
 	if (Data->ResultCode == EOS_EResult::EOS_Success)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
 	}
 	else
 	{
