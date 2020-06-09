@@ -27,7 +27,8 @@ public class EOSBasic : ModuleRules
             "OnlineSubsystemSteam",
             "Sockets",
             "Steamworks",
-            "SteamParty",
+            //TODO: Figure out why this had to be commented out
+//            "SteamParty",
             "UEOS",
             "EOSSDK"
             //"CoreUObject",
