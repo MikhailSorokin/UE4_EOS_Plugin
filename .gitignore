@@ -106,5 +106,8 @@ Tools
 /EOSBasic/Config/DefaultGame_Local.ini
 
 # Credentials
-EOSBasic/Credentials/*
-EOSBasic/Content/Credentials/*
+EOSBasic/Content/Credentials/DeploymentId.txt
+EOSBasic/Content/Credentials/SandboxId.txt
+EOSBasic/Content/Credentials/ProductId.txt
+EOSBasic/Content/Credentials/ClientId.txt
+EOSBasic/Content/Credentials/ClientSecretId.txt
