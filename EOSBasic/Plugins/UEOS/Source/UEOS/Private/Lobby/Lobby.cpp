@@ -37,27 +37,109 @@ void UEOSLobby::FindLobby(int32 InMaxSearchResults)
 	Options.ApiVersion = EOS_LOBBY_CREATELOBBYSEARCH_API_LATEST;
 	Options.MaxResults = InMaxSearchResults;
 
-	EOS_HLobbySearch* OutLobbySearchHandle = nullptr;
+	EOS_HLobbySearch OutLobbySearchHandle = nullptr;
 
-	EOS_EResult Result = EOS_Lobby_CreateLobbySearch(LobbyHandle, &Options, OutLobbySearchHandle);
+	EOS_EResult Result = EOS_Lobby_CreateLobbySearch(LobbyHandle, &Options, &OutLobbySearchHandle);
 	if (Result == EOS_EResult::EOS_Success)
 	{
-		LobbySearchHandle = *OutLobbySearchHandle;
+		LobbySearchHandle = OutLobbySearchHandle;
 
-		OnSearchResultsReceived();
+		//Set up a custom attribute to being the search query
+		/*FLobbyAttribute LevelAttribute;
+		LevelAttribute.Key = "LEVEL";
+		LevelAttribute.ValueType = FLobbyAttribute::String;
+		LevelAttribute.AsString = SearchLevelName;
+		LevelAttribute.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC;
 
-		//JoinLobby();
+		Attributes.push_back(LevelAttribute);*/
+
+
+		EOS_LobbySearch_SetParameterOptions ParamOptions = {};
+		ParamOptions.ApiVersion = EOS_LOBBYSEARCH_SETPARAMETER_API_LATEST;
+		ParamOptions.ComparisonOp = EOS_EComparisonOp::EOS_CO_EQUAL;
+
+		EOS_Lobby_AttributeData AttrData;
+		AttrData.ApiVersion = EOS_LOBBY_ATTRIBUTEDATA_API_LATEST;
+		AttrData.Key = "RANK";
+		AttrData.ValueType = EOS_EAttributeType::EOS_AT_STRING;
+		std::string MyRank = "Corporal";
+		AttrData.Value.AsUtf8 = MyRank.c_str();
+
+		ParamOptions.Parameter = &AttrData;
+
+		Result = EOS_LobbySearch_SetParameter(LobbySearchHandle, &ParamOptions);
+		if (EOS_EResult::EOS_Success == Result) {
+
+			EOS_LobbySearch_FindOptions FindOptions;
+			FindOptions.ApiVersion = EOS_LOBBYSEARCH_FIND_API_LATEST;
+			FindOptions.LocalUserId = UEOSManager::GetConnect()->GetProductId();
+
+			if (OnLobbySearchAttempt.IsBound()) {
+				OnLobbySearchAttempt.Broadcast();
+			}
+
+			EOS_LobbySearch_Find(LobbySearchHandle, &FindOptions, nullptr, OnSearchResultsReceived);
+		} else
+		{
+			FString ErrorText = FString::Printf(TEXT("[EOS SDK | Lobby] Lobby search attribute setting failed - Error Code: %s"), *UEOSCommon::EOSResultToString(Result));
+			UE_LOG(UEOSLog, Error, TEXT("%s:%s"), __FUNCTIONW__, *ErrorText);
+		}
 	}
 	else
 	{
 		FString ErrorText = FString::Printf(TEXT("[EOS SDK | Lobby] Lobby search Failed - Error Code: %s"), *UEOSCommon::EOSResultToString(Result));
-		UE_LOG(UEOSLog, Error, TEXT("%s"), *ErrorText);
+		UE_LOG(UEOSLog, Error, TEXT("%s:%s"), __FUNCTIONW__, *ErrorText);
 
 		if (OnLobbySearchFailed.IsBound()) {
 			OnLobbySearchFailed.Broadcast();
 		}
 	}
 
+}
+
+void UEOSLobby::UpdateLobby(EOS_LobbyId OwnerId)
+{
+	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
+	
+	EOS_Lobby_UpdateLobbyModificationOptions ModifyOptions = {};
+	ModifyOptions.ApiVersion = EOS_LOBBY_UPDATELOBBYMODIFICATION_API_LATEST;
+	ModifyOptions.LobbyId = OwnerId;
+	ModifyOptions.LocalUserId = UEOSManager::GetConnect()->GetProductId();
+
+	EOS_HLobbyModification LobbyModification = nullptr;
+	EOS_EResult Result = EOS_Lobby_UpdateLobbyModification(LobbyHandle, &ModifyOptions, &LobbyModification);
+
+	//TODO - Hardcode attribute for now
+	EOS_LobbyModification_AddAttributeOptions AddAttributeModOptions = {};
+	AddAttributeModOptions.ApiVersion = EOS_LOBBYMODIFICATION_ADDATTRIBUTE_API_LATEST;
+
+	EOS_Lobby_AttributeData AttrData;
+	AttrData.ApiVersion = EOS_LOBBY_ATTRIBUTEDATA_API_LATEST;
+	AttrData.Key = "RANK";
+	AttrData.ValueType = EOS_EAttributeType::EOS_AT_STRING;
+	std::string MyRank = "Corporal";
+	AttrData.Value.AsUtf8 = MyRank.c_str();
+	
+	AddAttributeModOptions.Attribute = &AttrData;
+	AddAttributeModOptions.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC;
+
+	Result = EOS_LobbyModification_AddAttribute(LobbyModification, &AddAttributeModOptions);
+	if (Result != EOS_EResult::EOS_Success)
+	{
+		FString ErrorText = FString::Printf(TEXT("[EOS SDK | Lobby] Lobby attribute update failed - Error Code: %s"), *UEOSCommon::EOSResultToString(Result));
+		UE_LOG(UEOSLog, Error, TEXT("%s:%s"), __FUNCTIONW__, *ErrorText);
+
+		if (UEOSManager::GetLobby()->OnLobbySearchFailed.IsBound()) {
+			UEOSManager::GetLobby()->OnLobbySearchFailed.Broadcast();
+		}
+	}
+
+	//Trigger lobby update
+	EOS_Lobby_UpdateLobbyOptions UpdateOptions = {};
+	UpdateOptions.ApiVersion = EOS_LOBBY_UPDATELOBBY_API_LATEST;
+	UpdateOptions.LobbyModificationHandle = LobbyModification;
+
+	EOS_Lobby_UpdateLobby(LobbyHandle, &UpdateOptions, nullptr, OnLobbyUpdateFinished);
 }
 
 
@@ -70,7 +152,9 @@ void UEOSLobby::CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
 	if (Data->ResultCode == EOS_EResult::EOS_Success)
 	{
 		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
+		UEOSManager::GetLobby()->UpdateLobby(Data->LobbyId);
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+		
 	}
 	else
 	{
@@ -87,8 +171,6 @@ void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
 		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
 		//EOS_LobbyDetails_Info* LobbyInfo;
 
-		UEOSManager::GetLobby()->OnSearchResultsReceived();
-		
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
 	}
 	else
@@ -98,57 +180,92 @@ void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
 }
 
 
-void UEOSLobby::OnSearchResultsReceived()
+void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* Data)
 {
-	EOS_LobbySearch_GetSearchResultCountOptions SearchResultOptions = {};
-	SearchResultOptions.ApiVersion = EOS_LOBBYSEARCH_GETSEARCHRESULTCOUNT_API_LATEST;
-	uint32_t NumSearchResults = EOS_LobbySearch_GetSearchResultCount(UEOSManager::GetLobby()->LobbySearchHandle, &SearchResultOptions);
+	if (Data->ResultCode == EOS_EResult::EOS_Success) {
+		EOS_LobbySearch_GetSearchResultCountOptions SearchResultOptions = {};
+		SearchResultOptions.ApiVersion = EOS_LOBBYSEARCH_GETSEARCHRESULTCOUNT_API_LATEST;
+		uint32_t NumSearchResults = EOS_LobbySearch_GetSearchResultCount(UEOSManager::GetLobby()->LobbySearchHandle, &SearchResultOptions);
 
-	TArray<FBPLobbySearchResult> SearchResults;
-	//TArray<LobbyDetailsKeeper> ResultHandles;
-
-	EOS_LobbySearch_CopySearchResultByIndexOptions IndexOptions = {};
-	IndexOptions.ApiVersion = EOS_LOBBYSEARCH_COPYSEARCHRESULTBYINDEX_API_LATEST;
-	for (uint32_t SearchIndex = 0; SearchIndex < NumSearchResults; ++SearchIndex)
-	{
-		FBPLobbySearchResult NextLobby;
-
-		EOS_HLobbyDetails NextLobbyDetails = nullptr;
-		IndexOptions.LobbyIndex = SearchIndex;
-		EOS_EResult Result = EOS_LobbySearch_CopySearchResultByIndex(UEOSManager::GetLobby()->LobbySearchHandle, &IndexOptions, &NextLobbyDetails);
-		if (Result == EOS_EResult::EOS_Success && NextLobbyDetails)
+		//Num search results will be 0 if search did not finish
+		if (NumSearchResults == 0.f)
 		{
+			UE_LOG(UEOSLog, Log, TEXT("Could not find any results - search is incomplete."));
+			return;
+		}
 
-			//get owner
-			EOS_LobbyDetails_GetLobbyOwnerOptions GetOwnerOptions = {};
-			GetOwnerOptions.ApiVersion = EOS_LOBBYDETAILS_GETLOBBYOWNER_API_LATEST;
-			FEpicProductId NewLobbyOwner = FEpicProductId(EOS_LobbyDetails_GetLobbyOwner(NextLobbyDetails, &GetOwnerOptions));
+		TArray<FBPLobbySearchResult> SearchResults;
+		//TArray<LobbyDetailsKeeper> ResultHandles;
 
-			//copy lobby info
-			EOS_LobbyDetails_CopyInfoOptions CopyInfoDetails;
-			CopyInfoDetails.ApiVersion = EOS_LOBBYDETAILS_COPYINFO_API_LATEST;
-			EOS_LobbyDetails_Info* LobbyInfo = nullptr;
-			Result = EOS_LobbyDetails_CopyInfo(NextLobbyDetails, &CopyInfoDetails, &LobbyInfo);
-			if (Result != EOS_EResult::EOS_Success || !LobbyInfo)
+		EOS_LobbySearch_CopySearchResultByIndexOptions IndexOptions = {};
+		IndexOptions.ApiVersion = EOS_LOBBYSEARCH_COPYSEARCHRESULTBYINDEX_API_LATEST;
+		for (uint32_t SearchIndex = 0; SearchIndex < NumSearchResults; ++SearchIndex)
+		{
+			FBPLobbySearchResult NextLobby;
+
+			EOS_HLobbyDetails NextLobbyDetails = nullptr;
+			IndexOptions.LobbyIndex = SearchIndex;
+			EOS_EResult Result = EOS_LobbySearch_CopySearchResultByIndex(UEOSManager::GetLobby()->LobbySearchHandle, &IndexOptions, &NextLobbyDetails);
+			if (Result == EOS_EResult::EOS_Success && NextLobbyDetails)
 			{
-				continue;
-			}
 
-			NextLobby.LobbyId = LobbyInfo->LobbyId;
-			NextLobby.OwnerId = NewLobbyOwner;
-			NextLobby.OwnerIdString = NextLobby.OwnerId.ToString();
-			
-			SearchResults.Add(NextLobby);
+				//get owner
+				EOS_LobbyDetails_GetLobbyOwnerOptions GetOwnerOptions = {};
+				GetOwnerOptions.ApiVersion = EOS_LOBBYDETAILS_GETLOBBYOWNER_API_LATEST;
+				FEpicProductId NewLobbyOwner = FEpicProductId(EOS_LobbyDetails_GetLobbyOwner(NextLobbyDetails, &GetOwnerOptions));
+
+				//copy lobby info
+				EOS_LobbyDetails_CopyInfoOptions CopyInfoDetails;
+				CopyInfoDetails.ApiVersion = EOS_LOBBYDETAILS_COPYINFO_API_LATEST;
+				EOS_LobbyDetails_Info* LobbyInfo = nullptr;
+				Result = EOS_LobbyDetails_CopyInfo(NextLobbyDetails, &CopyInfoDetails, &LobbyInfo);
+				if (Result != EOS_EResult::EOS_Success || !LobbyInfo)
+				{
+					continue;
+				}
+
+				NextLobby.LobbyId = LobbyInfo->LobbyId;
+				NextLobby.OwnerId = NewLobbyOwner;
+				NextLobby.OwnerIdString = NextLobby.OwnerId.ToString();
+
+				SearchResults.Add(NextLobby);
+			}
+		}
+
+		//Search is done, we can release this memory
+		EOS_LobbySearch_Release(UEOSManager::GetLobby()->LobbySearchHandle);
+
+		//TODO - For now , we choose a random integer session
+		int32 RandomIndex = FMath::RandRange(0, NumSearchResults - 1);
+		if (UEOSManager::GetLobby()->OnLobbySearchSucceeded.IsBound()) {
+			UEOSManager::GetLobby()->OnLobbySearchSucceeded.Broadcast(SearchResults[RandomIndex]);
 		}
 	}
+	else
+	{
+		FString ErrorText = FString::Printf(TEXT("[EOS SDK | Lobby] Lobby search Failed - Error Code: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
+		UE_LOG(UEOSLog, Error, TEXT("%s:%s"), __FUNCTIONW__, *ErrorText);
 
-	//Search is done, we can release this memory
-	EOS_LobbySearch_Release(UEOSManager::GetLobby()->LobbySearchHandle);
+		if (UEOSManager::GetLobby()->OnLobbySearchFailed.IsBound()) {
+			UEOSManager::GetLobby()->OnLobbySearchFailed.Broadcast();
+		}
+	}
+}
 
-	//TODO - For now , we choose a random integer session
-	int32 RandomIndex = FMath::RandRange(0, NumSearchResults - 1);
-	if (UEOSManager::GetLobby()->OnLobbySearchSucceeded.IsBound()) {
-		UEOSManager::GetLobby()->OnLobbySearchSucceeded.Broadcast(SearchResults[RandomIndex]);
+void UEOSLobby::OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* Data)
+{
+	check(Data != nullptr);
+
+	if (Data->ResultCode == EOS_EResult::EOS_Success)
+	{
+		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
+		//EOS_LobbyDetails_Info* LobbyInfo;
+
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, (TEXT("Lobby failed: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
 	}
 }
 

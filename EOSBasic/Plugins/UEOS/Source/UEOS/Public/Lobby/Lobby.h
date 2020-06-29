@@ -26,6 +26,7 @@ struct FBPLobbySearchResult {
 	
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbySearchAttempt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbySearchFailed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLobbySearchSucceeded, const FBPLobbySearchResult&, SessionInfo);
 
@@ -44,16 +45,21 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		void FindLobby(int32 InMaxSearchResults);
-	
+	void UpdateLobby(EOS_LobbyId OwnerId);
+
 	static void JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data);
 
-	static void OnSearchResultsReceived();
+	static void OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* Data);
+	static void OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* Data);
 
 	//Sets the lobby id based on the server you have found or started
 	EOS_LobbyId CurrentLobbyId;
 
 	//Lobby search result - used to search through all the available sessions
 	EOS_HLobbySearch LobbySearchHandle;
+
+	UPROPERTY(BlueprintAssignable)
+		FOnLobbySearchAttempt OnLobbySearchAttempt;
 	
 	UPROPERTY(BlueprintAssignable)
 		FOnLobbySearchFailed OnLobbySearchFailed;

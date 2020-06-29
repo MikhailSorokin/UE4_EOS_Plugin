@@ -11,6 +11,7 @@
 
 // EOS Plugin Includes
 #include "Authentication/Authentication.h"
+#include "Connect/Connect.h"
 
 #include "UserInfo.generated.h"
 
