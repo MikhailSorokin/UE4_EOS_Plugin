@@ -17,8 +17,9 @@ struct FBPLobbySearchResult {
 	UPROPERTY(BlueprintReadOnly)
 		FEpicProductId OwnerId;
 
+	/* The account id of the owner. */
 	UPROPERTY(BlueprintReadOnly)
-		FString OwnerIdString;
+		FEpicAccountId OwnerAccountId;
 
 	/** Lobby id */
 	EOS_LobbyId LobbyId;

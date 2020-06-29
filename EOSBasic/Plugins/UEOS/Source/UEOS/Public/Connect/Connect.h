@@ -15,6 +15,8 @@
 #include "eos_common.h"
 #include "UObject/CoreOnline.h"
 #include "OnlineAuthInterfaceUtilsSteam.h"
+#include "UEOSOnlineTypes.h"
+
 
 #include "Connect.generated.h"
 
@@ -126,6 +128,9 @@ struct UEOS_API FEpicProductId
 };
 
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnQueryExternalAccountsSucceeded, FEpicAccountId, ProductMappingToAccounts);
+
+
 UCLASS()
 class UEOS_API UEOSConnect : public UObject
 {
@@ -142,10 +147,20 @@ protected:
 	EOS_ContinuanceToken GlobalContinuanceToken;
 
 	// Similar to authentication, stores the credentials associated with login
-	FEpicProductId EpicProductId;
+	FEpicProductId CurrentProductId;
 
 	// Unique to connect interface, lets one know if one has linked this account to other subsystems.
 	bool bLinkedAccount;
+
+	//After QueryProductId is called, we can fetch information about all of these
+	TArray<FEpicProductId> CurrentQueriedProductIds;
+
+	//How we can get an account id from a product Id
+	TMap<FEpicProductId, FEpicAccountId> ExternalToEpicAccountsMap;
+
+	//Broadcast the above information to a map
+	UPROPERTY(BlueprintAssignable)
+		FOnQueryExternalAccountsSucceeded OnQueryExternalAccountsSucceeded;
 
 	/* ==================== FUNCTIONS ======================== */
 public:
@@ -166,8 +181,12 @@ public:
 		void InitializeParameters(FString InPlayerDisplayName);
 	
 	const FString EnumToString(const TCHAR* Enum, int32 EnumValue);
+	static void OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProductUserIdMappingsCallbackInfo* Info);
 
-	FEpicProductId FORCEINLINE GetProductId() const { return EpicProductId;  }
+	FEpicProductId FORCEINLINE GetProductId() const { return CurrentProductId;  }
+
+	UFUNCTION(BlueprintCallable)
+		void QueryUserInfoMappings(TArray<FEpicProductId> UserAccounts);
 	
 	// Similar to authentication, signifies one has been authorized to access information of an account connected to EAS.
 	bool bAuthorized;

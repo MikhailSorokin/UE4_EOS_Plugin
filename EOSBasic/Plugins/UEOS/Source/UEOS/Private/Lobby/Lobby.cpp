@@ -226,9 +226,10 @@ void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* 
 				}
 
 				NextLobby.LobbyId = LobbyInfo->LobbyId;
-				NextLobby.OwnerId = NewLobbyOwner;
-				NextLobby.OwnerIdString = NextLobby.OwnerId.ToString();
 
+				NextLobby.OwnerId = NewLobbyOwner;
+				NextLobby.OwnerAccountId = FEpicAccountId();
+				
 				SearchResults.Add(NextLobby);
 				ResultHandles.Add(NextLobbyDetails);
 			}
@@ -237,12 +238,11 @@ void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* 
 		//Search is done, we can release this memory
 		EOS_LobbySearch_Release(UEOSManager::GetLobby()->LobbySearchHandle);
 
-		//TODO - For now , we choose a random integer session
+		//Right now we choose to join by a random index
 		int32 RandomIndex = FMath::RandRange(0, NumSearchResults - 1);
 		if (UEOSManager::GetLobby()->OnLobbySearchSucceeded.IsBound()) {
-			UEOSManager::GetLobby()->JoinLobby(ResultHandles[RandomIndex]);
 			UEOSManager::GetLobby()->OnLobbySearchSucceeded.Broadcast(SearchResults[RandomIndex]);
-			
+
 		}
 	}
 	else
@@ -278,14 +278,11 @@ void UEOSLobby::JoinLobby(EOS_HLobbyDetails result)
 {
 	EOS_HLobbyDetails DetailsHandle = result; //need singleton lobby info?
 
-	
 	EOS_Lobby_JoinLobbyOptions Options = EOS_Lobby_JoinLobbyOptions();
 	Options.ApiVersion = EOS_LOBBY_CREATELOBBY_API_LATEST;
 	Options.LocalUserId = UEOSManager::GetConnect()->GetProductId();
 	Options.LobbyDetailsHandle = DetailsHandle;
 	
-	
-
 	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
 	EOS_Lobby_JoinLobby(LobbyHandle, &Options, nullptr, JoinLobbyCallback);
 }

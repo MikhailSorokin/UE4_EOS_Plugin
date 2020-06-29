@@ -13,9 +13,14 @@ UEOSUserInfo::UEOSUserInfo()
 
 }
 
+void UEOSUserInfo::QueryUserInfoByProductId(const FEpicProductId& EpicProductId)
+{
+}
+
 void UEOSUserInfo::QueryUserInfoByAccountId( const FEpicAccountId& EpicAccountId )
 {
 	EOS_HUserInfo UserInfoHandle = EOS_Platform_GetUserInfoInterface(UEOSManager::GetPlatformHandle());
+
 	EOS_UserInfo_QueryUserInfoOptions Options = {};
 	Options.ApiVersion = EOS_USERINFO_QUERYUSERINFO_API_LATEST;
 	Options.LocalUserId = UEOSManager::GetEOSManager()->GetAuthentication()->GetEpicAccountId();

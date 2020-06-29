@@ -160,8 +160,8 @@ void UEOSConnect::LoginUserCompleteCallback(const EOS_Connect_LoginCallbackInfo*
 		UEOSManager::GetConnect()->bAuthorized = true;
 
 		// Set local login information
-		UEOSManager::GetConnect()->EpicProductId = Data->LocalUserId;
-		UEOSManager::GetConnect()->EpicProductId.SetCredentialToken(Data->ContinuanceToken);
+		UEOSManager::GetConnect()->CurrentProductId = Data->LocalUserId;
+		UEOSManager::GetConnect()->CurrentProductId.SetCredentialToken(Data->ContinuanceToken);
 		
 		if (UEOSManager::GetConnect()->OnConnectLoginSuccess.IsBound())
 		{
@@ -215,7 +215,7 @@ void UEOSConnect::CreateUserCompleteCallback(const EOS_Connect_CreateUserCallbac
 
 		UEOSManager::GetConnect()->bAuthorized = true;
 		// Set local login information
-		UEOSManager::GetConnect()->EpicProductId = Data->LocalUserId;
+		UEOSManager::GetConnect()->CurrentProductId = Data->LocalUserId;
 
 		// TODO: prompt the user for optional linkage of accounts
 		
@@ -261,4 +261,65 @@ const FString UEOSConnect::EnumToString(const TCHAR* Enum, int32 EnumValue)
 	if (!EnumPtr)
 		return NSLOCTEXT("Invalid", "Invalid", "Invalid").ToString();
 	return EnumPtr->GetDisplayNameTextByIndex(EnumValue).ToString();
+}
+
+void UEOSConnect::QueryUserInfoMappings(TArray<FEpicProductId> UserAccounts)
+{
+	UEOSManager::GetConnect()->ExternalToEpicAccountsMap.Empty();
+	UEOSManager::GetConnect()->ExternalToEpicAccountsMap = TMap<FEpicProductId, FEpicAccountId>();
+
+	//Have to use the raw product user ids
+	TArray<EOS_ProductUserId> EpicAccountIds = TArray<EOS_ProductUserId>();
+	
+	for (const FEpicProductId& EpicProductId : UserAccounts) {
+		EpicAccountIds.Add(EpicProductId.ProductId);
+	}
+
+	EOS_Connect_QueryProductUserIdMappingsOptions Options = {};
+	Options.LocalUserId = GetProductId();
+	Options.ApiVersion = EOS_CONNECT_QUERYPRODUCTUSERIDMAPPINGS_API_LATEST;
+	Options.ProductUserIdCount = UserAccounts.Num();
+	Options.ProductUserIds = EpicAccountIds.GetData();
+
+	CurrentQueriedProductIds = UserAccounts;
+	
+	EOS_Connect_QueryProductUserIdMappings(ConnectHandle, &Options, nullptr, OnQueryUserInfoMappingsComplete);
+}
+
+void UEOSConnect::OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProductUserIdMappingsCallbackInfo* Info)
+{
+	EOS_HConnect ConnectHandle = EOS_Platform_GetConnectInterface(UEOSManager::GetPlatformHandle());
+	TArray<FEpicProductId> MappingsReceived;
+	TArray<FEpicAccountId> AccountIds;
+	
+	for (FEpicProductId ProductId : UEOSManager::GetConnect()->CurrentQueriedProductIds)
+	{
+		EOS_Connect_GetProductUserIdMappingOptions Options = {};
+		Options.ApiVersion = EOS_CONNECT_GETEXTERNALACCOUNTMAPPINGS_API_LATEST;
+		Options.AccountIdType = EOS_EExternalAccountType::EOS_EAT_EPIC;
+		Options.LocalUserId = Info->LocalUserId;
+		Options.TargetProductUserId = ProductId;
+
+		char OutBuffer[EOS_CONNECT_EXTERNAL_ACCOUNT_ID_MAX_LENGTH];
+		int32_t IDStringSize = EOS_CONNECT_EXTERNAL_ACCOUNT_ID_MAX_LENGTH;
+		EOS_EResult Result = EOS_Connect_GetProductUserIdMapping(ConnectHandle, &Options, OutBuffer, &IDStringSize);
+		std::string IDString(OutBuffer, IDStringSize);
+		if (Result == EOS_EResult::EOS_Success)
+		{
+			EOS_EpicAccountId NewMapping = FEpicAccountId::FromString(IDString.c_str());
+			UEOSManager::GetConnect()->ExternalToEpicAccountsMap.Add(ProductId, NewMapping);
+			MappingsReceived.Add(ProductId);
+			AccountIds.Add(NewMapping);
+		}
+
+
+		for (const FEpicProductId& NextId : MappingsReceived)
+		{
+			UEOSManager::GetConnect()->CurrentQueriedProductIds.Remove(NextId);
+		}
+
+		UEOSManager::GetConnect()->OnQueryExternalAccountsSucceeded.Broadcast(AccountIds[0]);
+	}
+
+	
 }

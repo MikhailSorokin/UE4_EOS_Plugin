@@ -26,6 +26,8 @@ public:
 
 	UEOSUserInfo();
 
+	void QueryUserInfoByProductId(const FEpicProductId& EpicProductId);
+
 	/**
 	 * Begins an async process to get User Info for the provided User.
 	 * Broadcasts either OnUserInfoRetreived or OnUserInfoError, when the request has completed.
