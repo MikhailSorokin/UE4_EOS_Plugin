@@ -162,6 +162,7 @@ void UEOSLobby::CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
 	}
 }
 
+//TODO this and create the UI for a joined lobby
 void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
 {
 	check(Data != nullptr);
@@ -195,7 +196,7 @@ void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* 
 		}
 
 		TArray<FBPLobbySearchResult> SearchResults;
-		//TArray<LobbyDetailsKeeper> ResultHandles;
+		TArray<EOS_HLobbyDetails> ResultHandles;
 
 		EOS_LobbySearch_CopySearchResultByIndexOptions IndexOptions = {};
 		IndexOptions.ApiVersion = EOS_LOBBYSEARCH_COPYSEARCHRESULTBYINDEX_API_LATEST;
@@ -229,6 +230,7 @@ void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* 
 				NextLobby.OwnerIdString = NextLobby.OwnerId.ToString();
 
 				SearchResults.Add(NextLobby);
+				ResultHandles.Add(NextLobbyDetails);
 			}
 		}
 
@@ -238,7 +240,9 @@ void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* 
 		//TODO - For now , we choose a random integer session
 		int32 RandomIndex = FMath::RandRange(0, NumSearchResults - 1);
 		if (UEOSManager::GetLobby()->OnLobbySearchSucceeded.IsBound()) {
+			UEOSManager::GetLobby()->JoinLobby(ResultHandles[RandomIndex]);
 			UEOSManager::GetLobby()->OnLobbySearchSucceeded.Broadcast(SearchResults[RandomIndex]);
+			
 		}
 	}
 	else
@@ -269,6 +273,22 @@ void UEOSLobby::OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* D
 	}
 }
 
+
+void UEOSLobby::JoinLobby(EOS_HLobbyDetails result)
+{
+	EOS_HLobbyDetails DetailsHandle = result; //need singleton lobby info?
+
+	
+	EOS_Lobby_JoinLobbyOptions Options = EOS_Lobby_JoinLobbyOptions();
+	Options.ApiVersion = EOS_LOBBY_CREATELOBBY_API_LATEST;
+	Options.LocalUserId = UEOSManager::GetConnect()->GetProductId();
+	Options.LobbyDetailsHandle = DetailsHandle;
+	
+	
+
+	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
+	EOS_Lobby_JoinLobby(LobbyHandle, &Options, nullptr, JoinLobbyCallback);
+}
 
 /*
 EOS_HLobbyDetails DetailsHandle;

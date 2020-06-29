@@ -45,12 +45,17 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		void FindLobby(int32 InMaxSearchResults);
+	
+	void JoinLobby(EOS_HLobbyDetails result);
+
+	
 	void UpdateLobby(EOS_LobbyId OwnerId);
 
 	static void JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data);
 
 	static void OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* Data);
 	static void OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* Data);
+	
 
 	//Sets the lobby id based on the server you have found or started
 	EOS_LobbyId CurrentLobbyId;
