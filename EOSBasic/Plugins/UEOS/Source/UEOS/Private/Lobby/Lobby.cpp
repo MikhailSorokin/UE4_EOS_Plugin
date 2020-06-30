@@ -165,6 +165,8 @@ void UEOSLobby::CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
 //TODO this and create the UI for a joined lobby
 void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
 {
+	UE_LOG(UEOSLog, Log, TEXT("%s: got inside"));
+	
 	check(Data != nullptr);
 
 	if (Data->ResultCode == EOS_EResult::EOS_Success)
@@ -172,11 +174,11 @@ void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
 		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
 		//EOS_LobbyDetails_Info* LobbyInfo;
 
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+		UE_LOG(UEOSLog, Log, TEXT("%s: lobby join succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
 	}
 	else
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, (TEXT("Lobby failed: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+		UE_LOG(UEOSLog, Log, TEXT("%s: lobby join failed: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
 	}
 }
 
@@ -242,7 +244,7 @@ void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* 
 		int32 RandomIndex = FMath::RandRange(0, NumSearchResults - 1);
 		if (UEOSManager::GetLobby()->OnLobbySearchSucceeded.IsBound()) {
 			UEOSManager::GetLobby()->OnLobbySearchSucceeded.Broadcast(SearchResults[RandomIndex]);
-
+			UEOSManager::GetLobby()->FoundLobby = ResultHandles[RandomIndex];
 		}
 	}
 	else
@@ -266,6 +268,7 @@ void UEOSLobby::OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* D
 		//EOS_LobbyDetails_Info* LobbyInfo;
 
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+
 	}
 	else
 	{
@@ -274,9 +277,9 @@ void UEOSLobby::OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* D
 }
 
 
-void UEOSLobby::JoinLobby(EOS_HLobbyDetails result)
+void UEOSLobby::JoinLobby()
 {
-	EOS_HLobbyDetails DetailsHandle = result; //need singleton lobby info?
+	EOS_HLobbyDetails DetailsHandle = UEOSManager::GetLobby()->FoundLobby; //need singleton lobby info?
 
 	EOS_Lobby_JoinLobbyOptions Options = EOS_Lobby_JoinLobbyOptions();
 	Options.ApiVersion = EOS_LOBBY_CREATELOBBY_API_LATEST;

@@ -20,7 +20,7 @@ UEOSConnect::UEOSConnect()
 	: ConnectHandle( NULL )
 
 {
-
+	CurrentQueriedProductIds = TArray<FEpicProductId>();
 }
 
 
@@ -282,15 +282,15 @@ void UEOSConnect::QueryUserInfoMappings(TArray<FEpicProductId> UserAccounts)
 	Options.ProductUserIds = EpicAccountIds.GetData();
 
 	CurrentQueriedProductIds = UserAccounts;
-	
+
 	EOS_Connect_QueryProductUserIdMappings(ConnectHandle, &Options, nullptr, OnQueryUserInfoMappingsComplete);
 }
 
 void UEOSConnect::OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProductUserIdMappingsCallbackInfo* Info)
 {
 	EOS_HConnect ConnectHandle = EOS_Platform_GetConnectInterface(UEOSManager::GetPlatformHandle());
-	TArray<FEpicProductId> MappingsReceived;
-	TArray<FEpicAccountId> AccountIds;
+	TArray<FEpicProductId> MappingsReceived = TArray<FEpicProductId>();
+	TArray<FEpicAccountId> AccountIds = TArray<FEpicAccountId>();
 	
 	for (FEpicProductId ProductId : UEOSManager::GetConnect()->CurrentQueriedProductIds)
 	{
@@ -311,15 +311,22 @@ void UEOSConnect::OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProduct
 			MappingsReceived.Add(ProductId);
 			AccountIds.Add(NewMapping);
 		}
-
-
-		for (const FEpicProductId& NextId : MappingsReceived)
+		else
 		{
-			UEOSManager::GetConnect()->CurrentQueriedProductIds.Remove(NextId);
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "ERROR: " + UEOSCommon::EOSResultToString(Result));
+			return;
 		}
 
-		UEOSManager::GetConnect()->OnQueryExternalAccountsSucceeded.Broadcast(AccountIds[0]);
 	}
+	
+	for (const FEpicProductId& NextId : MappingsReceived)
+	{
+		UEOSManager::GetConnect()->CurrentQueriedProductIds.Remove(NextId);
+	}
+
+	//TODO - Hardcoded for now to get the owner - should be generalized to include all members
+	UEOSManager::GetConnect()->OnQueryExternalAccountsSucceeded.Broadcast(AccountIds[0]);
+
 
 	
 }
