@@ -46,10 +46,13 @@ public:
 		void CreateLobby(int32 InLobbyMembers);
 
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		void DestroyLobby();
+
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		void FindLobby(int32 InMaxSearchResults);
 	
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
-		void JoinLobby();
+		static void JoinLobby();
 
 	
 	void UpdateLobby(EOS_LobbyId OwnerId);
@@ -63,7 +66,12 @@ public:
 	//Sets the lobby id based on the server you have found or started
 	EOS_LobbyId CurrentLobbyId;
 
-	EOS_HLobbyDetails FoundLobby;
+	//Called upon fetching current lobby details
+	EOS_HLobbyDetails CurrentLobbyDetailsHandle;
+
+	//Called upon update function call
+	EOS_HLobbyModification LobbyModificationHandle;
+
 	
 	//Lobby search result - used to search through all the available sessions
 	EOS_HLobbySearch LobbySearchHandle;
@@ -81,7 +89,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 		FOnLobbyJoinSucceeded OnJoinLobbySucceeded;
 
-	
-	static void CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data);
-	
+
+	static void OnCreateLobbyCallback(const EOS_Lobby_CreateLobbyCallbackInfo* Data);
+	static void OnDestroyLobbyCallback(const _tagEOS_Lobby_DestroyLobbyCallbackInfo* Data);
 };

@@ -17,7 +17,7 @@ void UEOSLobby::CreateLobby(int32 InLobbyMembers)
 	}
 
 	UE_LOG(UEOSLog, Log, TEXT("%s: lobby being created."), __FUNCTIONW__);
-	
+
 	EOS_Lobby_CreateLobbyOptions Options = EOS_Lobby_CreateLobbyOptions();
 	Options.ApiVersion = EOS_LOBBY_CREATELOBBY_API_LATEST;
 	Options.LocalUserId = UEOSManager::GetConnect()->GetProductId();
@@ -25,7 +25,19 @@ void UEOSLobby::CreateLobby(int32 InLobbyMembers)
 	Options.PermissionLevel = EOS_ELobbyPermissionLevel::EOS_LPL_PUBLICADVERTISED;
 
 	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
-	EOS_Lobby_CreateLobby(LobbyHandle, &Options, this, CallBackLobbyTest);
+	EOS_Lobby_CreateLobby(LobbyHandle, &Options, this, OnCreateLobbyCallback);
+}
+
+
+void UEOSLobby::DestroyLobby()
+{
+	EOS_Lobby_DestroyLobbyOptions Options = EOS_Lobby_DestroyLobbyOptions();
+	Options.ApiVersion = EOS_LOBBY_CREATELOBBY_API_LATEST;
+	Options.LocalUserId = UEOSManager::GetConnect()->GetProductId();
+	Options.LobbyId = CurrentLobbyId;
+
+	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
+	EOS_Lobby_DestroyLobby(LobbyHandle, &Options, this, OnDestroyLobbyCallback);
 }
 
 
@@ -106,9 +118,8 @@ void UEOSLobby::UpdateLobby(EOS_LobbyId OwnerId)
 	ModifyOptions.LobbyId = OwnerId;
 	ModifyOptions.LocalUserId = UEOSManager::GetConnect()->GetProductId();
 
-	EOS_HLobbyModification LobbyModification = nullptr;
-	EOS_EResult Result = EOS_Lobby_UpdateLobbyModification(LobbyHandle, &ModifyOptions, &LobbyModification);
-
+	EOS_EResult Result = EOS_Lobby_UpdateLobbyModification(LobbyHandle, &ModifyOptions, &LobbyModificationHandle);
+	
 	//TODO - Hardcode attribute for now
 	EOS_LobbyModification_AddAttributeOptions AddAttributeModOptions = {};
 	AddAttributeModOptions.ApiVersion = EOS_LOBBYMODIFICATION_ADDATTRIBUTE_API_LATEST;
@@ -123,7 +134,7 @@ void UEOSLobby::UpdateLobby(EOS_LobbyId OwnerId)
 	AddAttributeModOptions.Attribute = &AttrData;
 	AddAttributeModOptions.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC;
 
-	Result = EOS_LobbyModification_AddAttribute(LobbyModification, &AddAttributeModOptions);
+	Result = EOS_LobbyModification_AddAttribute(LobbyModificationHandle, &AddAttributeModOptions);
 	if (Result != EOS_EResult::EOS_Success)
 	{
 		FString ErrorText = FString::Printf(TEXT("[EOS SDK | Lobby] Lobby attribute update failed - Error Code: %s"), *UEOSCommon::EOSResultToString(Result));
@@ -137,15 +148,16 @@ void UEOSLobby::UpdateLobby(EOS_LobbyId OwnerId)
 	//Trigger lobby update
 	EOS_Lobby_UpdateLobbyOptions UpdateOptions = {};
 	UpdateOptions.ApiVersion = EOS_LOBBY_UPDATELOBBY_API_LATEST;
-	UpdateOptions.LobbyModificationHandle = LobbyModification;
+	UpdateOptions.LobbyModificationHandle = LobbyModificationHandle;
 
 	EOS_Lobby_UpdateLobby(LobbyHandle, &UpdateOptions, nullptr, OnLobbyUpdateFinished);
+
 }
 
 
 /* ===================================== Callbacks ============================ */
 
-void UEOSLobby::CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
+void UEOSLobby::OnCreateLobbyCallback(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
 {
 	check(Data != nullptr);
 
@@ -162,10 +174,26 @@ void UEOSLobby::CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
 	}
 }
 
-//TODO this and create the UI for a joined lobby
+
+void UEOSLobby::OnDestroyLobbyCallback(const _tagEOS_Lobby_DestroyLobbyCallbackInfo* Data)
+{
+	check(Data != nullptr);
+
+	if (Data->ResultCode == EOS_EResult::EOS_Success)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Destroy lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, (TEXT("Destroy lobby  failed: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+	}
+}
+
+
 void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
 {
-	UE_LOG(UEOSLog, Log, TEXT("%s: got inside"));
+	UE_LOG(UEOSLog, Log, TEXT("%s: got inside"), __FUNCTIONW__);
 	
 	check(Data != nullptr);
 
@@ -173,8 +201,16 @@ void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
 	{
 		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
 		//EOS_LobbyDetails_Info* LobbyInfo;
-
+		
 		UE_LOG(UEOSLog, Log, TEXT("%s: lobby join succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
+		if(UEOSManager::GetLobby()->OnJoinLobbySucceeded.IsBound())
+		{
+			UEOSManager::GetLobby()->OnJoinLobbySucceeded.Broadcast();
+		}
+
+		//Remove current lobby detail after done using it
+		EOS_LobbyDetails_Release(UEOSManager::GetLobby()->CurrentLobbyDetailsHandle);
+		
 	}
 	else
 	{
@@ -244,7 +280,21 @@ void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* 
 		int32 RandomIndex = FMath::RandRange(0, NumSearchResults - 1);
 		if (UEOSManager::GetLobby()->OnLobbySearchSucceeded.IsBound()) {
 			UEOSManager::GetLobby()->OnLobbySearchSucceeded.Broadcast(SearchResults[RandomIndex]);
-			UEOSManager::GetLobby()->FoundLobby = ResultHandles[RandomIndex];
+			UEOSManager::GetLobby()->CurrentLobbyDetailsHandle = ResultHandles[RandomIndex];
+
+			TArray<EOS_HLobbyDetails> AddForRemoval = TArray<EOS_HLobbyDetails>();
+			for (EOS_HLobbyDetails ResultHandle : ResultHandles)
+			{
+				if (ResultHandles[RandomIndex] != ResultHandle)
+				{
+					AddForRemoval.Add(ResultHandles[RandomIndex]);
+				}
+			}
+
+			for (EOS_HLobbyDetails Removal : AddForRemoval)
+			{
+				EOS_LobbyDetails_Release(Removal);
+			}
 		}
 	}
 	else
@@ -266,6 +316,9 @@ void UEOSLobby::OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* D
 	{
 		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
 		//EOS_LobbyDetails_Info* LobbyInfo;
+	
+		EOS_LobbyModification_Release(UEOSManager::GetLobby()->LobbyModificationHandle);
+		
 
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
 
@@ -279,7 +332,7 @@ void UEOSLobby::OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* D
 
 void UEOSLobby::JoinLobby()
 {
-	EOS_HLobbyDetails DetailsHandle = UEOSManager::GetLobby()->FoundLobby; //need singleton lobby info?
+	EOS_HLobbyDetails DetailsHandle = UEOSManager::GetLobby()->CurrentLobbyDetailsHandle; //need singleton lobby info?
 
 	EOS_Lobby_JoinLobbyOptions Options = EOS_Lobby_JoinLobbyOptions();
 	Options.ApiVersion = EOS_LOBBY_CREATELOBBY_API_LATEST;

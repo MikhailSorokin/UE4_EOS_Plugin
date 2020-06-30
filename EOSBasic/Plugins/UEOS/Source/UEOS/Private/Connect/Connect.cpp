@@ -269,11 +269,13 @@ void UEOSConnect::QueryUserInfoMappings(TArray<FEpicProductId> UserAccounts)
 	UEOSManager::GetConnect()->ExternalToEpicAccountsMap = TMap<FEpicProductId, FEpicAccountId>();
 
 	//Have to use the raw product user ids
-	TArray<EOS_ProductUserId> EpicAccountIds = TArray<EOS_ProductUserId>();
+	TArray<EOS_ProductUserId> EpicAccountIds;
 	
 	for (const FEpicProductId& EpicProductId : UserAccounts) {
 		EpicAccountIds.Add(EpicProductId.ProductId);
 	}
+
+	UE_LOG(UEOSLog, Error, TEXT("%s: number of accounts is: %s"), __FUNCTIONW__, *FString::FromInt(UserAccounts.Num()));
 
 	EOS_Connect_QueryProductUserIdMappingsOptions Options = {};
 	Options.LocalUserId = GetProductId();
@@ -281,6 +283,7 @@ void UEOSConnect::QueryUserInfoMappings(TArray<FEpicProductId> UserAccounts)
 	Options.ProductUserIdCount = UserAccounts.Num();
 	Options.ProductUserIds = EpicAccountIds.GetData();
 
+	CurrentQueriedProductIds.Empty();
 	CurrentQueriedProductIds = UserAccounts;
 
 	EOS_Connect_QueryProductUserIdMappings(ConnectHandle, &Options, nullptr, OnQueryUserInfoMappingsComplete);
@@ -291,6 +294,7 @@ void UEOSConnect::OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProduct
 	EOS_HConnect ConnectHandle = EOS_Platform_GetConnectInterface(UEOSManager::GetPlatformHandle());
 	TArray<FEpicProductId> MappingsReceived = TArray<FEpicProductId>();
 	TArray<FEpicAccountId> AccountIds = TArray<FEpicAccountId>();
+	bool bNoErrorFetchingConnectQuery = true;
 	
 	for (FEpicProductId ProductId : UEOSManager::GetConnect()->CurrentQueriedProductIds)
 	{
@@ -300,7 +304,7 @@ void UEOSConnect::OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProduct
 		Options.LocalUserId = Info->LocalUserId;
 		Options.TargetProductUserId = ProductId;
 
-		char OutBuffer[EOS_CONNECT_EXTERNAL_ACCOUNT_ID_MAX_LENGTH];
+		char* OutBuffer = new char[EOS_CONNECT_EXTERNAL_ACCOUNT_ID_MAX_LENGTH];
 		int32_t IDStringSize = EOS_CONNECT_EXTERNAL_ACCOUNT_ID_MAX_LENGTH;
 		EOS_EResult Result = EOS_Connect_GetProductUserIdMapping(ConnectHandle, &Options, OutBuffer, &IDStringSize);
 		std::string IDString(OutBuffer, IDStringSize);
@@ -313,20 +317,24 @@ void UEOSConnect::OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProduct
 		}
 		else
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "ERROR: " + UEOSCommon::EOSResultToString(Result));
-			return;
+			bNoErrorFetchingConnectQuery = false;
+			UE_LOG(UEOSLog, Error, TEXT("%s: query error with %s"), __FUNCTIONW__, *UEOSCommon::EOSResultToString(Result));
+			break;
 		}
-
+		delete[] OutBuffer;
 	}
-	
+
 	for (const FEpicProductId& NextId : MappingsReceived)
 	{
 		UEOSManager::GetConnect()->CurrentQueriedProductIds.Remove(NextId);
 	}
 
-	//TODO - Hardcoded for now to get the owner - should be generalized to include all members
-	UEOSManager::GetConnect()->OnQueryExternalAccountsSucceeded.Broadcast(AccountIds[0]);
 
+	if (bNoErrorFetchingConnectQuery)
+	{
+		//TODO - Hardcoded for now to get the owner - should be generalized to include all members
+		UEOSManager::GetConnect()->OnQueryExternalAccountsSucceeded.Broadcast(AccountIds[0]);
+	}
 
 	
 }

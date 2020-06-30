@@ -31,10 +31,10 @@ void AEOSBasicGameModeBase::LobbyTest()
 	Options.PermissionLevel = EOS_ELobbyPermissionLevel::EOS_LPL_PUBLICADVERTISED;
 
 	this->LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
-	EOS_Lobby_CreateLobby(this->LobbyHandle, &Options, this, CallBackLobbyTest);
+	EOS_Lobby_CreateLobby(this->LobbyHandle, &Options, this, OnCreateLobbyCallback);
 }
 
-void AEOSBasicGameModeBase::CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
+void AEOSBasicGameModeBase::OnCreateLobbyCallback(const EOS_Lobby_CreateLobbyCallbackInfo* Data)
 {
 	check(Data != nullptr);
 
