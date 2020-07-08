@@ -26,6 +26,8 @@ void UEOSLobby::CreateLobby(int32 InLobbyMembers)
 
 	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
 	EOS_Lobby_CreateLobby(LobbyHandle, &Options, this, OnCreateLobbyCallback);
+
+	
 }
 
 
@@ -111,6 +113,8 @@ void UEOSLobby::FindLobby(int32 InMaxSearchResults)
 
 void UEOSLobby::UpdateLobby(EOS_LobbyId OwnerId)
 {
+	UE_LOG(UEOSLog, Error, TEXT("%s:OwnerId: %s"), __FUNCTIONW__, *UEOSManager::GetConnect()->GetProductId().ToString());
+
 	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
 	
 	EOS_Lobby_UpdateLobbyModificationOptions ModifyOptions = {};
@@ -152,6 +156,14 @@ void UEOSLobby::UpdateLobby(EOS_LobbyId OwnerId)
 
 	EOS_Lobby_UpdateLobby(LobbyHandle, &UpdateOptions, nullptr, OnLobbyUpdateFinished);
 
+	EOS_Lobby_SendInviteOptions InviteOptions = {};
+	InviteOptions.LobbyId = CurrentLobbyId;
+	InviteOptions.ApiVersion = EOS_LOBBY_CREATELOBBYSEARCH_API_LATEST;
+	InviteOptions.LocalUserId = UEOSManager::GetConnect()->GetProductId();
+	InviteOptions.TargetUserId = FEpicProductId::FromString("0002f010460e47bebed6f752ab89ad91");
+	
+	//send invite
+	EOS_Lobby_SendInvite(LobbyHandle, &InviteOptions, nullptr, OnInviteToLobbyCallback);
 }
 
 
@@ -165,7 +177,14 @@ void UEOSLobby::OnCreateLobbyCallback(const EOS_Lobby_CreateLobbyCallbackInfo* D
 	{
 		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
 		UEOSManager::GetLobby()->UpdateLobby(Data->LobbyId);
+
+		
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+		//lobby is created
+		if (UEOSManager::GetLobby()->OnCreateLobbySucceeded.IsBound())
+		{
+			UEOSManager::GetLobby()->OnCreateLobbySucceeded.Broadcast();
+		}
 		
 	}
 	else
@@ -326,6 +345,20 @@ void UEOSLobby::OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* D
 	else
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, (TEXT("Lobby failed: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
+	}
+}
+
+void UEOSLobby::OnInviteToLobbyCallback(const EOS_Lobby_SendInviteCallbackInfo* Data)
+{
+	check(Data != nullptr);
+
+	if (Data->ResultCode == EOS_EResult::EOS_Success)
+	{
+		UE_LOG(UEOSLog, Error, TEXT("%s:Invite was successful, %s"), __FUNCTIONW__, *UEOSCommon::EOSResultToString(Data->ResultCode));
+
+	} else
+	{
+		UE_LOG(UEOSLog, Error, TEXT("%s:Invite was a terrible terrible failure, %s"), __FUNCTIONW__,  *UEOSCommon::EOSResultToString(Data->ResultCode));
 	}
 }
 
