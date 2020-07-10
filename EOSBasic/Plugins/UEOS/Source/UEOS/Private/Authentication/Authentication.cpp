@@ -91,6 +91,20 @@ void UEOSAuthentication::Login( ELoginMode LoginMode, FString UserId, FString Us
 			break;
 		}
 
+		//TODO - Store the access token and continuance token in player data storage somewhere
+		//Acts like an AutoLogin
+		case ELoginMode::LM_PersistentAuth:
+		{
+			Credentials.Type = EOS_ELoginCredentialType::EOS_LCT_PersistentAuth;
+			break;
+		}
+
+		case
+		{
+			Credentials.Type = EOS_ELoginCredentialType::EOS_LCT_ExternalAuth;
+			break;
+		}
+
 		default:
 			break;
 	}

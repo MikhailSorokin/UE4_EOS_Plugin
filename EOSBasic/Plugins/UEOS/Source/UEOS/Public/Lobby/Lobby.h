@@ -29,6 +29,8 @@ struct FBPLobbySearchResult {
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbySearchAttempt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbySearchFailed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbyJoinSucceeded);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbyCreatedSucceeded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLobbySearchSucceeded, const FBPLobbySearchResult&, SessionInfo);
 
 /**
@@ -45,9 +47,13 @@ public:
 		void CreateLobby(int32 InLobbyMembers);
 
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		void DestroyLobby();
+
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		void FindLobby(int32 InMaxSearchResults);
 	
-	void JoinLobby(EOS_HLobbyDetails result);
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		static void JoinLobby();
 
 	
 	void UpdateLobby(EOS_LobbyId OwnerId);
@@ -56,11 +62,19 @@ public:
 
 	static void OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* Data);
 	static void OnLobbyUpdateFinished(const EOS_Lobby_UpdateLobbyCallbackInfo* Data);
-	
+
+	static void OnInviteToLobbyCallback(const EOS_Lobby_SendInviteCallbackInfo* Data);
 
 	//Sets the lobby id based on the server you have found or started
 	EOS_LobbyId CurrentLobbyId;
 
+	//Called upon fetching current lobby details
+	EOS_HLobbyDetails CurrentLobbyDetailsHandle;
+
+	//Called upon update function call
+	EOS_HLobbyModification LobbyModificationHandle;
+
+	
 	//Lobby search result - used to search through all the available sessions
 	EOS_HLobbySearch LobbySearchHandle;
 
@@ -72,7 +86,19 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 		FOnLobbySearchSucceeded OnLobbySearchSucceeded;
+
+	UPROPERTY(BlueprintAssignable)
+		FOnLobbyJoinSucceeded OnJoinLobbySucceeded;
+
+	UPROPERTY(BlueprintAssignable)
+		FOnLobbyCreatedSucceeded OnCreateLobbySucceeded;
 	
-	static void CallBackLobbyTest(const EOS_Lobby_CreateLobbyCallbackInfo* Data);
+	TArray<EOS_HLobbyDetails> HandlesForRemoval;
+
+
+	static void OnCreateLobbyCallback(const EOS_Lobby_CreateLobbyCallbackInfo* Data);
+	static void OnDestroyLobbyCallback(const _tagEOS_Lobby_DestroyLobbyCallbackInfo* Data);
+	
+
 	
 };
