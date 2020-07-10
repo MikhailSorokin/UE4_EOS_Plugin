@@ -99,7 +99,7 @@ void UEOSAuthentication::Login( ELoginMode LoginMode, FString UserId, FString Us
 			break;
 		}
 
-		case
+		case ELoginMode::LM_ExternalAuth:
 		{
 			Credentials.Type = EOS_ELoginCredentialType::EOS_LCT_ExternalAuth;
 			break;
