@@ -81,7 +81,11 @@ void UEOSConnect::Login(EExternalCredentialType ExternalCredentialType)
 
 		UE_LOG(UEOSLog, Verbose, TEXT("%s: Bound HandleSteamEncryptedAppTicketResponse to OnEncryptedAppTicketResultDelegate."), __FUNCTIONW__)
 		// Connect login will continue when this callback occurs.
+	} else if (ExternalCredentialType == EExternalCredentialType::ECT_Discord)
+	{
+		//TODO - Set this up
 	}
+
 	else
 	{
 		UE_LOG(UEOSLog, Fatal, TEXT("%s: Unhandled EExternalCredentialType: %d"), __FUNCTIONW__, ExternalCredentialType)
@@ -300,6 +304,7 @@ void UEOSConnect::OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProduct
 	{
 		EOS_Connect_GetProductUserIdMappingOptions Options = {};
 		Options.ApiVersion = EOS_CONNECT_GETEXTERNALACCOUNTMAPPINGS_API_LATEST;
+		//TODO - Pass in the account type in here - could be different
 		Options.AccountIdType = EOS_EExternalAccountType::EOS_EAT_EPIC;
 		Options.LocalUserId = Info->LocalUserId;
 		Options.TargetProductUserId = ProductId;

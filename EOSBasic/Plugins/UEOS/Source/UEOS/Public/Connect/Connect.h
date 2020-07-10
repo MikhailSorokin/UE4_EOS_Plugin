@@ -31,10 +31,12 @@ UENUM(BlueprintType)
 enum class EExternalCredentialType : uint8
 {
 	/* Epic Games Account */
-	ECT_Epic = 0	UMETA(DisplayName = "Epic"),
+	ECT_Epic = 0				UMETA(DisplayName = "Epic"),
 
 	/* Steam Encrypted App Ticket*/
-	ECT_Steam_App_Ticket = 1	UMETA(DisplayName = "Steam")
+	ECT_Steam_App_Ticket = 1	UMETA(DisplayName = "Steam"),
+
+	ECT_Discord = 2				UMETA(DisplayName = "Discord")
 };
 
 
