@@ -275,9 +275,9 @@ void UEOSConnect::QueryUserInfoMappings(TArray<FEpicProductId> UserAccounts)
 		EpicAccountIds.Add(EpicProductId.ProductId);
 	}
 
-	UE_LOG(UEOSLog, Error, TEXT("%s: number of accounts is: %s"), __FUNCTIONW__, *FString::FromInt(UserAccounts.Num()));
+	UE_LOG(UEOSLog, Log, TEXT("%s: number of accounts is: %s"), __FUNCTIONW__, *FString::FromInt(UserAccounts.Num()));
 
-	/*EOS_Connect_QueryProductUserIdMappingsOptions Options = {};
+	EOS_Connect_QueryProductUserIdMappingsOptions Options = {};
 	Options.LocalUserId = GetProductId();
 	Options.ApiVersion = EOS_CONNECT_QUERYPRODUCTUSERIDMAPPINGS_API_LATEST;
 	Options.ProductUserIdCount = UserAccounts.Num();
@@ -286,7 +286,7 @@ void UEOSConnect::QueryUserInfoMappings(TArray<FEpicProductId> UserAccounts)
 	CurrentQueriedProductIds.Empty();
 	CurrentQueriedProductIds = UserAccounts;
 
-	EOS_Connect_QueryProductUserIdMappings(ConnectHandle, &Options, nullptr, OnQueryUserInfoMappingsComplete);*/
+	EOS_Connect_QueryProductUserIdMappings(ConnectHandle, &Options, nullptr, OnQueryUserInfoMappingsComplete);
 }
 
 void UEOSConnect::OnQueryUserInfoMappingsComplete(const EOS_Connect_QueryProductUserIdMappingsCallbackInfo* Info)
