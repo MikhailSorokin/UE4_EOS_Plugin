@@ -92,6 +92,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 		FOnLobbyCreatedSucceeded OnCreateLobbySucceeded;
+	
+	TArray<EOS_HLobbyDetails> HandlesForRemoval;
 
 
 	static void OnCreateLobbyCallback(const EOS_Lobby_CreateLobbyCallbackInfo* Data);

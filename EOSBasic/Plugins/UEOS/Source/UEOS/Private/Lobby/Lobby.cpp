@@ -210,34 +210,6 @@ void UEOSLobby::OnDestroyLobbyCallback(const _tagEOS_Lobby_DestroyLobbyCallbackI
 }
 
 
-void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
-{
-	UE_LOG(UEOSLog, Log, TEXT("%s: got inside"), __FUNCTIONW__);
-	
-	check(Data != nullptr);
-
-	if (Data->ResultCode == EOS_EResult::EOS_Success)
-	{
-		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
-		//EOS_LobbyDetails_Info* LobbyInfo;
-		
-		UE_LOG(UEOSLog, Log, TEXT("%s: lobby join succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
-		if(UEOSManager::GetLobby()->OnJoinLobbySucceeded.IsBound())
-		{
-			UEOSManager::GetLobby()->OnJoinLobbySucceeded.Broadcast();
-		}
-
-		//Remove current lobby detail after done using it
-		EOS_LobbyDetails_Release(UEOSManager::GetLobby()->CurrentLobbyDetailsHandle);
-		
-	}
-	else
-	{
-		UE_LOG(UEOSLog, Log, TEXT("%s: lobby join failed: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
-	}
-}
-
-
 void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* Data)
 {
 	if (Data->ResultCode == EOS_EResult::EOS_Success) {
@@ -298,22 +270,17 @@ void UEOSLobby::OnSearchResultsReceived(const EOS_LobbySearch_FindCallbackInfo* 
 		//Right now we choose to join by a random index
 		int32 RandomIndex = FMath::RandRange(0, NumSearchResults - 1);
 		if (UEOSManager::GetLobby()->OnLobbySearchSucceeded.IsBound()) {
-			UEOSManager::GetLobby()->OnLobbySearchSucceeded.Broadcast(SearchResults[RandomIndex]);
+			//Lobby details handle has to be set first
 			UEOSManager::GetLobby()->CurrentLobbyDetailsHandle = ResultHandles[RandomIndex];
 
-			TArray<EOS_HLobbyDetails> AddForRemoval = TArray<EOS_HLobbyDetails>();
+			//We have the details handle added in memory, we can remove them
+			UEOSManager::GetLobby()->HandlesForRemoval = TArray<EOS_HLobbyDetails>();
 			for (EOS_HLobbyDetails ResultHandle : ResultHandles)
 			{
-				if (ResultHandles[RandomIndex] != ResultHandle)
-				{
-					AddForRemoval.Add(ResultHandles[RandomIndex]);
-				}
+				UEOSManager::GetLobby()->HandlesForRemoval.Add(ResultHandle);
 			}
 
-			for (EOS_HLobbyDetails Removal : AddForRemoval)
-			{
-				EOS_LobbyDetails_Release(Removal);
-			}
+			UEOSManager::GetLobby()->OnLobbySearchSucceeded.Broadcast(SearchResults[RandomIndex]);
 		}
 	}
 	else
@@ -376,27 +343,34 @@ void UEOSLobby::JoinLobby()
 	EOS_Lobby_JoinLobby(LobbyHandle, &Options, nullptr, JoinLobbyCallback);
 }
 
-/*
-EOS_HLobbyDetails DetailsHandle;
 
-EOS_LOBBYI
+void UEOSLobby::JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data)
+{
+	UE_LOG(UEOSLog, Log, TEXT("%s: got inside"), __FUNCTIONW__);
 
-EOS_Lobby_CopyLobbyDetailsHandleOptions CopyHandleOptions = {};
-CopyHandleOptions.ApiVersion = EOS_LOBBY_COPYLOBBYDETAILSHANDLE_API_LATEST;
-CopyHandleOptions.LobbyId = ;
-CopyHandleOptions.LocalUserId = UEOSManager::GetConnect()->GetProductId();
+	check(Data != nullptr);
 
-EOS_HLobbyDetails LobbyDetailsHandle = nullptr;
-Result = EOS_Lobby_CopyLobbyDetailsHandle(LobbyHandle, &CopyHandleOptions, &LobbyDetailsHandle);
+	if (Data->ResultCode == EOS_EResult::EOS_Success)
+	{
+		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
+		//EOS_LobbyDetails_Info* LobbyInfo;
 
-EOS_LobbySearch_(UEOSManager::GetLobby()->LobbySearchHandle, &IndexOptions, &NextLobbyDetails);
+		UE_LOG(UEOSLog, Log, TEXT("%s: lobby join succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
+		if (UEOSManager::GetLobby()->OnJoinLobbySucceeded.IsBound())
+		{
+			UEOSManager::GetLobby()->OnJoinLobbySucceeded.Broadcast();
+		}
 
-//Found a lobby, let us join a random one (if possible)
-EOS_Lobby_JoinLobbyOptions Options;
-Options.ApiVersion = EOS_LOBBY_JOINLOBBY_API_LATEST;
-Options.LobbyDetailsHandle = DetailsHandle;
-Options.LocalUserId = UEOSManager::GetConnect()->GetProductId();
+		//Remove all lobby details after done with the results
+		for (EOS_HLobbyDetails ResultHandle : UEOSManager::GetLobby()->HandlesForRemoval)
+		{
+			EOS_LobbyDetails_Release(ResultHandle);
+		}
 
-
-EOS_Lobby_JoinLobby(LobbyHandle, &Options, nullptr, JoinLobbyCallback);
-*/
+		UEOSManager::GetLobby()->HandlesForRemoval.Empty();
+	}
+	else
+	{
+		UE_LOG(UEOSLog, Log, TEXT("%s: lobby join failed: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode));
+	}
+}
