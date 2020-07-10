@@ -20,6 +20,8 @@ enum class ELoginMode : uint8
 	LM_PinGrant			UMETA(DisplayName = "Pin Grant"),		/** Login using a pin grant */
 	LM_DevTool			UMETA(DisplayName = "Dev Tool")		/** Login using the EOS SDK Dev Auth Tool */,
 	LM_AccountPortal    UMETA(DisplayName = "Account Portal")		/** Logins using a web portal login through your browser. */,
+	LM_PersistentAuth	UMETA(DisplayName = "Persistent Authentication") /** Remembers your credential tokens and keeps that throughout the project. */,
+	LM_ExternalAuth		UMETA(DisplayName = "External Authentication")	/** Logins with an identity provider and links that account to an Epic Games Account. */,
 };
 
 /**
