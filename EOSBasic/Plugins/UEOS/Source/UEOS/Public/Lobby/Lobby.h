@@ -55,6 +55,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		static void JoinLobby();
 
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		/* Acquires a EOS_HLobbyModification to start a lobby modification transcation. */
+		void StartLobbyModification();
+
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		void AddStringMemberAttribute(const FString& Key, const FString& Value);
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		void AddBooleanMemberAttribute(const FString& Key, bool Value);
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		/* Note that 'double' is not legal in Blueprint. The float Value will be casted to a double.*/
+		void AddDoubleMemberAttribute(const FString& Key, float Value);
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		/* Note that 'int64' is not legal in Blueprints. The int32 Value will be casted to an int64. */
+		void AddInt64MemberAttribute(const FString& Key, int32 Value);
+
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		void CommitLobbyModification();
 	
 	void UpdateLobby(EOS_LobbyId OwnerId);
 
@@ -98,7 +115,7 @@ public:
 
 	static void OnCreateLobbyCallback(const EOS_Lobby_CreateLobbyCallbackInfo* Data);
 	static void OnDestroyLobbyCallback(const _tagEOS_Lobby_DestroyLobbyCallbackInfo* Data);
-	
 
-	
+private:
+	void AddMemberAttribute(const FString& Key, EOS_Lobby_AttributeData* AttributeDataWithValueFilledIn);
 };

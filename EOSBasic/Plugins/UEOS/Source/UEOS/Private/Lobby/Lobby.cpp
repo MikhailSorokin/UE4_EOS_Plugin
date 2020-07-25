@@ -111,6 +111,26 @@ void UEOSLobby::FindLobby(int32 InMaxSearchResults)
 
 }
 
+void UEOSLobby::StartLobbyModification()
+{
+	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
+
+	EOS_Lobby_UpdateLobbyModificationOptions ModifyOptions = {};
+	ModifyOptions.ApiVersion = EOS_LOBBY_UPDATELOBBYMODIFICATION_API_LATEST;
+	ModifyOptions.LobbyId = CurrentLobbyId;
+	ModifyOptions.LocalUserId = UEOSManager::GetConnect()->GetProductId();
+
+	EOS_EResult Result = EOS_Lobby_UpdateLobbyModification(LobbyHandle, &ModifyOptions, &LobbyModificationHandle);
+	if (Result == EOS_EResult::EOS_Success)
+	{
+		UE_LOG(UEOSLog, Log, TEXT("Started lobby modification."))
+	}
+	else
+	{
+		UE_LOG(UEOSLog, Error, TEXT("Start lobby modification failed; error message: %s"), *UEOSCommon::EOSResultToString(Result))
+	}
+}
+
 void UEOSLobby::UpdateLobby(EOS_LobbyId OwnerId)
 {
 	UE_LOG(UEOSLog, Error, TEXT("%s:OwnerId: %s"), __FUNCTIONW__, *UEOSManager::GetConnect()->GetProductId().ToString());
@@ -166,6 +186,75 @@ void UEOSLobby::UpdateLobby(EOS_LobbyId OwnerId)
 	EOS_Lobby_SendInvite(LobbyHandle, &InviteOptions, nullptr, OnInviteToLobbyCallback);
 }
 
+void UEOSLobby::AddStringMemberAttribute(const FString& Key, const FString& Value)
+{
+	EOS_Lobby_AttributeData AttributeData;
+	AttributeData.ValueType = EOS_EAttributeType::EOS_AT_STRING;
+	AttributeData.Value.AsUtf8 = TCHAR_TO_UTF8(*Value);
+
+	AddMemberAttribute(Key, &AttributeData);
+}
+
+void UEOSLobby::AddBooleanMemberAttribute(const FString& Key, bool Value)
+{
+	EOS_Lobby_AttributeData AttributeData;
+	AttributeData.ValueType = EOS_EAttributeType::EOS_AT_BOOLEAN;
+	AttributeData.Value.AsBool = Value;
+
+	AddMemberAttribute(Key, &AttributeData);
+}
+
+void UEOSLobby::AddDoubleMemberAttribute(const FString& Key, float Value)
+{
+	EOS_Lobby_AttributeData AttributeData;
+	AttributeData.ValueType = EOS_EAttributeType::EOS_AT_DOUBLE;
+	AttributeData.Value.AsDouble = (double) Value;
+
+	AddMemberAttribute(Key, &AttributeData);
+}
+
+void UEOSLobby::AddInt64MemberAttribute(const FString& Key, int32 Value)
+{
+	EOS_Lobby_AttributeData AttributeData;
+	AttributeData.ValueType = EOS_EAttributeType::EOS_AT_INT64;
+	AttributeData.Value.AsInt64 = (int64) Value;
+
+	AddMemberAttribute(Key, &AttributeData);
+}
+
+void UEOSLobby::AddMemberAttribute(const FString& Key, EOS_Lobby_AttributeData* AttributeDataWithValueFilledIn)
+{	
+	AttributeDataWithValueFilledIn->ApiVersion = EOS_LOBBY_ATTRIBUTEDATA_API_LATEST;
+	AttributeDataWithValueFilledIn->Key = TCHAR_TO_UTF8(*Key);
+	
+	EOS_LobbyModification_AddMemberAttributeOptions AddMemberAttributeOptions;
+	AddMemberAttributeOptions.ApiVersion = EOS_LOBBYMODIFICATION_ADDMEMBERATTRIBUTE_API_LATEST;
+	AddMemberAttributeOptions.Attribute = AttributeDataWithValueFilledIn;
+	AddMemberAttributeOptions.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC; // TODO: Allow private visibility
+
+	EOS_EResult Result = EOS_LobbyModification_AddMemberAttribute(LobbyModificationHandle, &AddMemberAttributeOptions);
+
+	if (Result == EOS_EResult::EOS_Success)
+	{
+		UE_LOG(UEOSLog, Log, TEXT("Successfully added member attribute %s"), *Key)
+	}
+	else
+	{
+		UE_LOG(UEOSLog, Error, TEXT("Failed to add member attribute %s; Status code: %d; Error message: %s"), *Key, Result, *UEOSCommon::EOSResultToString(Result))
+	}
+}
+
+void UEOSLobby::CommitLobbyModification()
+{
+	EOS_HLobby LobbyHandle = EOS_Platform_GetLobbyInterface(UEOSManager::GetPlatformHandle());
+
+	EOS_Lobby_UpdateLobbyOptions UpdateOptions;
+	UpdateOptions.ApiVersion = EOS_LOBBY_UPDATELOBBY_API_LATEST;
+	UpdateOptions.LobbyModificationHandle = LobbyModificationHandle;
+	
+	EOS_Lobby_UpdateLobby(LobbyHandle, &UpdateOptions, this, OnLobbyUpdateFinished);
+}
+
 
 /* ===================================== Callbacks ============================ */
 
@@ -175,15 +264,16 @@ void UEOSLobby::OnCreateLobbyCallback(const EOS_Lobby_CreateLobbyCallbackInfo* D
 
 	if (Data->ResultCode == EOS_EResult::EOS_Success)
 	{
-		UEOSManager::GetLobby()->CurrentLobbyId = Data->LobbyId;
-		UEOSManager::GetLobby()->UpdateLobby(Data->LobbyId);
+		UEOSLobby* InstigatingLobbyObject = (UEOSLobby *) Data->ClientData;
+		InstigatingLobbyObject->CurrentLobbyId = Data->LobbyId;
 
-		
+		//UEOSManager::GetLobby()->UpdateLobby(Data->LobbyId);
+				
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, (TEXT("Lobby succeeded: %s"), *UEOSCommon::EOSResultToString(Data->ResultCode)));
 		//lobby is created
-		if (UEOSManager::GetLobby()->OnCreateLobbySucceeded.IsBound())
+		if (InstigatingLobbyObject->OnCreateLobbySucceeded.IsBound())
 		{
-			UEOSManager::GetLobby()->OnCreateLobbySucceeded.Broadcast();
+			InstigatingLobbyObject->OnCreateLobbySucceeded.Broadcast();
 		}
 		
 	}
