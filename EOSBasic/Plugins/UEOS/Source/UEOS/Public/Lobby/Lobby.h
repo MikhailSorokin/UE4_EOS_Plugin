@@ -41,6 +41,15 @@ class UEOS_API UEOSLobby : public UObject
 {
 	GENERATED_BODY()
 
+protected:
+	//Enums that can be used to get all the updates needed from the lobby
+	EOS_NotificationId LobbyUpdateNotification = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId LobbyMemberUpdateNotification = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId LobbyMemberStatusNotification = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId LobbyInviteNotification = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId LobbyInviteAcceptedNotification = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId JoinLobbyAcceptedNotification = EOS_INVALID_NOTIFICATIONID;
+	
 public:
 
 	UFUNCTION(BlueprintCallable, Category="UEOS|Lobby")
@@ -49,15 +58,46 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		void DestroyLobby();
 
+	/**
+	 * Takes in a desired player number and maximum search results to have visible.
+	 *
+	 * @param DesiredPlayerNum the filter used for determining the gamemode
+	 * @param InMaxSearchResults how many search results we should retrieve in one search
+	 */
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
-		void FindLobby(int32 InMaxSearchResults);
+		void FindLobby(int32 DesiredPlayerNum, int32 InMaxSearchResults);
 	
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
-		static void JoinLobby();
+		void JoinLobby();
 
+	/* Acquires a EOS_HLobbyModification to start a lobby modification transaction. */
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
-		/* Acquires a EOS_HLobbyModification to start a lobby modification transcation. */
 		void StartLobbyModification();
+	/* Used to commit lobby information to have the rest of the lobby get updates. */
+	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		void CommitLobbyModification();
+
+	//Subscription to events that can be used for when a party wants to have lobby travel together
+	UFUNCTION(BlueprintCallable)
+		void SubscribeToLobbyInvites();
+	UFUNCTION(BlueprintCallable)
+		void UnsubscribeFromLobbyInvites();
+	
+	static void OnLobbyInviteReceived(const EOS_Lobby_LobbyInviteReceivedCallbackInfo* Data);
+	static void OnLobbyInviteAccepted(const EOS_Lobby_LobbyInviteAcceptedCallbackInfo* Data);
+	static void OnJoinLobbyAccepted(const EOS_Lobby_JoinLobbyAcceptedCallbackInfo* Data);
+
+	//Subscription to events that can be called through joining/finding a lobby
+	void SubscribeToLobbyUpdates();
+	void UnsubscribeFromLobbyUpdates();
+	
+	static void OnLobbyUpdateReceived(const EOS_Lobby_LobbyUpdateReceivedCallbackInfo* Data);
+	static void OnMemberUpdateReceived(const EOS_Lobby_LobbyMemberUpdateReceivedCallbackInfo* Data);
+	static void OnMemberStatusReceived(const EOS_Lobby_LobbyMemberStatusReceivedCallbackInfo* Data);
+
+	void SendInviteToUser(EOS_LobbyId InLobbyId);
+	void RequestLobbyInformation(EOS_LobbyId OwnerId,
+	                             EOS_LobbyDetails_Info** DetailsInfo);
 
 	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		void AddStringMemberAttribute(const FString& Key, const FString& Value);
@@ -70,9 +110,7 @@ public:
 		/* Note that 'int64' is not legal in Blueprints. The int32 Value will be casted to an int64. */
 		void AddInt64MemberAttribute(const FString& Key, int32 Value);
 
-	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
-		void CommitLobbyModification();
-	
+protected:
 	void UpdateLobby(EOS_LobbyId OwnerId);
 
 	static void JoinLobbyCallback(const EOS_Lobby_JoinLobbyCallbackInfo* Data);
@@ -86,7 +124,7 @@ public:
 	EOS_LobbyId CurrentLobbyId;
 
 	//Called upon fetching current lobby details
-	EOS_HLobbyDetails CurrentLobbyDetailsHandle;
+	EOS_HLobbyDetails ChosenLobbyToJoin;
 
 	//Called upon update function call
 	EOS_HLobbyModification LobbyModificationHandle;
