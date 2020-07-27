@@ -27,6 +27,48 @@ struct FBPLobbySearchResult {
 	
 };
 
+USTRUCT(BlueprintType)
+struct FBPAttribute
+{
+	GENERATED_BODY()
+	/**
+	* Construct wrapper from product id.
+	*/
+	FBPAttribute(const EOS_Lobby_AttributeData& InAttributeData)
+		: AttributeData(InAttributeData)
+	{
+	};
+
+	FBPAttribute() = default;
+
+	FBPAttribute(const FBPAttribute&) = default;
+
+	FBPAttribute& operator=(const FBPAttribute&) = default;
+
+	/*bool operator==(const FBPAttribute& Other) const
+	{
+		return AttributeData == Other.AttributeData;
+	}
+
+	bool operator!=(const FBPAttribute& Other) const
+	{
+		return !(this->operator==(Other));
+	}*/
+	/**
+	* Easy conversion to EOS attribute ID.
+	*/
+	operator EOS_Lobby_AttributeData() const
+	{
+		return AttributeData;
+	}
+
+	/** The EOS SDK matching Product Id. */
+	EOS_Lobby_AttributeData			AttributeData;
+	
+	//TODO - Pass in types here
+	
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbySearchAttempt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbySearchFailed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbyJoinSucceeded);
@@ -49,7 +91,8 @@ protected:
 	EOS_NotificationId LobbyInviteNotification = EOS_INVALID_NOTIFICATIONID;
 	EOS_NotificationId LobbyInviteAcceptedNotification = EOS_INVALID_NOTIFICATIONID;
 	EOS_NotificationId JoinLobbyAcceptedNotification = EOS_INVALID_NOTIFICATIONID;
-	
+	bool bIsServer;
+
 public:
 
 	UFUNCTION(BlueprintCallable, Category="UEOS|Lobby")
@@ -99,16 +142,24 @@ public:
 	void RequestLobbyInformation(EOS_LobbyId OwnerId,
 	                             EOS_LobbyDetails_Info** DetailsInfo);
 
-	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
-		void AddStringMemberAttribute(const FString& Key, const FString& Value);
-	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
-		void AddBooleanMemberAttribute(const FString& Key, bool Value);
-	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+	void AddStringMemberAttribute(const FString& Key, const FString& Value, EOS_Lobby_AttributeData& AttributeData);
+	void AddBooleanMemberAttribute(const FString& Key, bool Value, EOS_Lobby_AttributeData& AttributeData);
+	/* Note that 'double' is not legal in Blueprint. The float Value will be casted to a double.*/
+	void AddDoubleMemberAttribute(const FString& Key, float Value, EOS_Lobby_AttributeData& AttributeData);
+	/* Note that 'int64' is not legal in Blueprints. The int32 Value will be casted to an int64. */
+	void AddInt64MemberAttribute(const FString& Key, int32 Value, EOS_Lobby_AttributeData& AttributeData);
+
+	//TODO - Wrap as a variant type to get it to work as BlueprintCallable
+	//UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		//void AddStringMemberAttribute(const FString& Key, const FString& Value, const FBPAttribute& AttributeData);
+	//UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		//void AddBooleanMemberAttribute(const FString& Key, bool Value, const FBPAttribute& AttributeData);
+	//UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		/* Note that 'double' is not legal in Blueprint. The float Value will be casted to a double.*/
-		void AddDoubleMemberAttribute(const FString& Key, float Value);
-	UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
+		//void AddDoubleMemberAttribute(const FString& Key, float Value, const FBPAttribute& AttributeData);
+	//UFUNCTION(BlueprintCallable, Category = "UEOS|Lobby")
 		/* Note that 'int64' is not legal in Blueprints. The int32 Value will be casted to an int64. */
-		void AddInt64MemberAttribute(const FString& Key, int32 Value);
+		//void AddInt64MemberAttribute(const FString& Key, int32 Value, const FBPAttribute& AttributeData);
 
 protected:
 	void UpdateLobby(EOS_LobbyId OwnerId);
@@ -155,5 +206,5 @@ protected:
 	static void OnDestroyLobbyCallback(const _tagEOS_Lobby_DestroyLobbyCallbackInfo* Data);
 
 private:
-	void AddMemberAttribute(const FString& Key, EOS_Lobby_AttributeData* AttributeDataWithValueFilledIn);
+	void AddMemberAttribute(const FString& Key, EOS_Lobby_AttributeData& AttributeDataWithValueFilledIn);
 };
